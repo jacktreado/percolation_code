@@ -52,6 +52,10 @@ voroperc::~voroperc(){
 	delete [] NVp;
 	delete [] NEp;
 	delete [] NFp;
+
+	// close stream objects
+	if (xyzobj.is_open())
+		xyzobj.close();
 }
 
 
@@ -117,7 +121,6 @@ void voroperc::get_voro(int printit){
 	double x,y,z;
 	bool pbc;
 	voronoicell_neighbor c;
-	vector<int> neigh,f_vert;
 	vector<double> v;
 
 	// instantiate main object of container class
@@ -136,8 +139,6 @@ void voroperc::get_voro(int printit){
 		id = cl.pid();	
 
 		// Gather information about the computed voronoi cell
-		c.neighbors(neigh);
-		c.face_vertices(f_vert);
 		c.vertices(x,y,z,v);
 
 		// get number of vertices per particles
@@ -148,29 +149,74 @@ void voroperc::get_voro(int printit){
 		if (printit == 1){
 			cout << endl << endl;
 			cout << "on particle id = " << id;
-			cout << "; x = " << x << ", pos[" id "][0] = " << pos[id][0];
-			cout << "; y = " << y << ", pos[" id "][1] = " << pos[id][1];
-			cout << "; z = " << z << ", pos[" id "][2] = " << pos[id][2];
+			cout << "; x = " << x << ", pos[" << id << "][0] = " << pos[id][0];
+			cout << "; y = " << y << ", pos[" << id << "][1] = " << pos[id][1];
+			cout << "; z = " << z << ", pos[" << id << "][2] = " << pos[id][2];
 			cout << endl;
 			output_vpp_stats(c,x,y,z);
 			cout << endl << endl;
+
+			if (xyzobj.is_open())
+				this->print_vertices_xyz(id,c);
 		}
 
 		// merge vertices from vertex vector to global vertex list
-		this->merge_vertices(id,c);
+		// this->merge_vertices(id,c);
 
 	} while(cl.inc());
 }
 
 
 void voroperc::merge_vertices(int id, voronoicell_neighbor& c){
+	// get variables from clustertree
+	int NDIM;
+	NDIM = this->get_NDIM();
 
+	// local vectors
+	vector<int> neigh,f_vert;
+	vector<double> v;
 
+	// get information about computed voronoi cell
+	c.neighbors(neigh);
+	c.face_vertices(f_vert);
+	c.vertices(x,y,z,v);
 
+	// add unique vertices to list of vertices
 
-
-
-
-	
 }
+
+
+void voroperc::print_vertices_xyz(int id, voronoicell_neighbor& c){
+	int i,d,w;
+	int NDIM = this->get_NDIM();
+	vector<double> v;
+	w = 12;
+
+	// get vertex positions for cell id
+	c.vertices(pos[id][0],pos[id][1],pos[id][2],v);
+
+	// print info to xyz string
+	xyzobj << NVp[id] << endl;
+	xyzobj << "Lattice=\"" << B[0] << " 0.0 0.0";
+	xyzobj << " 0.0 " << B[1] << " 0.0";
+	xyzobj << " 0.0 0.0 " << B[2] << "\"";
+	xyzobj << '\t';
+	xyzobj << "Properties=species:S:1:pos:R:3:radius:R:1" << endl;
+	for (i=0; i<NVp[id]; i++){
+		xyzobj << setw(w) << "X" << id;
+		for (d=0; d<NDIM; d++)
+			xyzobj << setw(w) << v.at(NDIM*i+d);
+		xyzobj << 0.01;
+		xyzobj << endl;
+	}
+}
+
+
+
+
+
+
+
+
+
 

@@ -12,6 +12,8 @@
 #include "voidcluster.h"
 #include "voro++.hh"
 #include <vector>
+#include <fstream>
+#include <string>
 
 class voroperc : public voidcluster
 {
@@ -37,6 +39,9 @@ private:
 	std::vector<double> cpax;
 	std::vector<double> cpay;
 	std::vector<double> cpaz;
+
+	// ofstream object
+	std::ofstream xyzobj;
 public:
 	// constructors & destructors
 	voroperc(int np);
@@ -61,13 +66,22 @@ public:
 
 	// get voronoi vertex information
 	void get_voro(int printit);
-	void merge_vertices(int id, voronoicell_neighbor &c);
+	void merge_vertices(int id, voro::voronoicell_neighbor& c);
 
 	// setup lattice for percolation
 
 	// get edge percolation
 
 	// print information: lattice, network, xyz
+	void open_xyz(std::string& str){
+		xyzobj.open(str.c_str());
+		if (!xyzobj.is_open()){
+			std::cout << "ERROR: xyzobj could not open..." << std::endl;
+			std::cout << "ERROR: file str = " << str << std::endl;
+			throw;
+		}
+	}
+	void print_vertices_xyz(int id, voro::voronoicell_neighbor& c);
 };
 
 
