@@ -25,6 +25,10 @@ private:
 	int NV; 					// total number of vertices
 	int NE; 					// total number of edges
 
+	// particle-to-global mapping info
+	std::vector<int> k2p;
+	std::vector<int> k2v;
+
 	// vertex positions in global coodinate system
 	std::vector<double> vpx;
 	std::vector<double> vpy;
