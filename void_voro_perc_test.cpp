@@ -8,7 +8,7 @@
 
 int main(){
 	// initialize the only two important parameters
-	int N = 10;
+	int N = 3;
 	int seed = 1;
 
 	// instantiate object
