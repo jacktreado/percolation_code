@@ -190,7 +190,7 @@ void voroperc::print_vertices_xyz(int id, voronoicell_neighbor& c){
 	int i,d,w;
 	int NDIM = this->get_NDIM();
 	vector<double> v;
-	w = 12;
+	w = 16;
 
 	// get vertex positions for cell id
 	c.vertices(pos[id][0],pos[id][1],pos[id][2],v);
@@ -206,7 +206,7 @@ void voroperc::print_vertices_xyz(int id, voronoicell_neighbor& c){
 		xyzobj << setw(w) << "X" << id;
 		for (d=0; d<NDIM; d++)
 			xyzobj << setw(w) << v.at(NDIM*i+d);
-		xyzobj << 0.01;
+		xyzobj << setw(w) << 0.01;
 		xyzobj << endl;
 	}
 }
