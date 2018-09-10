@@ -26,17 +26,19 @@ private:
 	int NE; 					// total number of edges
 
 	// particle-to-global mapping info
-
+	std::vector<double>* vpx;
+	std::vector<double>* vpy;
+	std::vector<double>* vpz;
 
 	// vertex positions in global coodinate system
-	std::vector<double> vpx;
-	std::vector<double> vpy;
-	std::vector<double> vpz;
+	std::vector<double> vx;
+	std::vector<double> vy;
+	std::vector<double> vz;
 
 	// edge positions in global coordinate system
-	std::vector<double> epx;
-	std::vector<double> epy;
-	std::vector<double> epz;
+	std::vector<double> ex;
+	std::vector<double> ey;
+	std::vector<double> ez;
 
 	// point of closest approach in global coordinate system
 	std::vector<double> cpax;

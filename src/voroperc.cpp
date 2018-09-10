@@ -28,9 +28,15 @@ voroperc::voroperc(int np) : voidcluster(np,1,3,6){
 	NEp = nullptr;
 	NFp = nullptr;
 
+	// initialize size arrays
 	this->init_NVp(np);
 	this->init_NEp(np);
 	this->init_NFp(np);
+
+	// initialize vector arrays
+	vpx = new vector<double>[np];
+	vpy = new vector<double>[np];
+	vpz = new vector<double>[np];
 }
 
 
@@ -76,10 +82,11 @@ void voroperc::get_voro(int printit){
 	// initialize voro++ loop variables
 	// NOTE: naming conventions based on 
 	// example file polygons.cc
-	int i,j,id,n,init;
+	int i,j,id,nvtmp,nftmp,netmp,n,init;
 	double x,y,z;
 	bool pbc;
 	voronoicell_neighbor c;
+	vector<int> neigh,f_vert;
 	vector<double> v;
 
 	// instantiate main object of container class
@@ -98,12 +105,17 @@ void voroperc::get_voro(int printit){
 		id = cl.pid();	
 
 		// Gather information about the computed voronoi cell
+		c.neighbors(neigh);
+		c.face_vertices(f_vert);
 		c.vertices(x,y,z,v);
 
-		// get number of vertices per particles
-		this->set_NVp(id,v.size()/3);
-		this->set_NEp(id,c.number_of_edges());
-		this->set_NFp(id,c.number_of_faces());
+		// get number of vertices/edges/faces per particles
+		nvtmp = v.size()/3;
+		netmp = c.number_of_edge();
+		nftmp = c.number_of_faces();
+		this->set_NVp(id,nvtmp);
+		this->set_NEp(id,netmp);
+		this->set_NFp(id,nftmp);
 
 		if (printit == 1){
 			cout << endl << endl;
@@ -118,6 +130,18 @@ void voroperc::get_voro(int printit){
 			if (xyzobj.is_open())
 				this->print_vertices_xyz(id,c);
 		}
+
+		// store neighbors for each face on each particle
+		for (k=0; k<nvtmp; k++){
+			kxi = NDIM*k;   vxtmp = v[kxi];
+			kyi = NDIM*k+1;	vytmp = v[kyi];
+			kzi = NDIM*k+2;	vztmp = v[kzi];
+
+			vpx[id].push_back(vxtmp);
+			vpy[id].push_back(vytmp);
+			vpz[id].push_back(vztmp);
+		}
+
 
 	} while(cl.inc());
 }
