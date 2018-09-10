@@ -24,18 +24,13 @@ using namespace std;
 const double PI = 3.1415926;
 
 voroperc::voroperc(int np) : voidcluster(np,1,3,6){
-	int i = 0;
+	NVp = nullptr;
+	NEp = nullptr;
+	NFp = nullptr;
 
-	NVp = new int[NP];
-	NEp = new int[NP];
-	NFp = new int[NP];
-
-	for (i=0; i<NP; i++){
-		NVp[i] = 0;
-		NEp[i] = 0;
-		NFp[i] = 0;
-	}
-
+	this->init_NVp(np);
+	this->init_NEp(np);
+	this->init_NFp(np);
 }
 
 
@@ -146,24 +141,36 @@ void voroperc::get_voro(int printit){
 		c.vertices(x,y,z,v);
 
 		// get number of vertices per particles
-		this->get_NVp(id,v);
+		this->set_NVp(id,v.size()/3);
+		this->set_NEp(id,c.number_of_edges());
+		this->set_NFp(id,c.number_of_faces());
 
 		if (printit == 1){
 			cout << endl << endl;
 			cout << "on particle id = " << id;
-			cout << "; x = " << x << ", pos[i][0] = " << pos[id][0];
-			cout << "; y = " << y << ", pos[i][1] = " << pos[id][1];
-			cout << "; z = " << z << ", pos[i][2] = " << pos[id][2];
+			cout << "; x = " << x << ", pos[" id "][0] = " << pos[id][0];
+			cout << "; y = " << y << ", pos[" id "][1] = " << pos[id][1];
+			cout << "; z = " << z << ", pos[" id "][2] = " << pos[id][2];
 			cout << endl;
 			output_vpp_stats(c,x,y,z);
 			cout << endl << endl;
 		}
 
 		// merge vertices from vertex vector to global vertex list
+		this->merge_vertices(id,c);
 
 	} while(cl.inc());
-
-
 }
 
+
+void voroperc::merge_vertices(int id, voronoicell_neighbor& c){
+
+
+
+
+
+
+
+	
+}
 
