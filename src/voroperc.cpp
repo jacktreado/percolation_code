@@ -119,72 +119,8 @@ void voroperc::get_voro(int printit){
 				this->print_vertices_xyz(id,c);
 		}
 
-		// merge vertices from vertex vector to global vertex list
-		// this->merge_vertices(id,c);
-
 	} while(cl.inc());
 }
-
-
-double voroperc::merge_vertices(int id, voronoicell_neighbor& c){
-	// get variables from clustertree
-	int NDIM;
-	NDIM = this->get_NDIM();
-
-	// local variables
-	vector<int> neigh,f_vert;
-	vector<double> v;
-	int i,k,nv;
-
-	// get information about computed voronoi cell
-	c.neighbors(neigh);
-	c.face_vertices(f_vert);
-	c.vertices(pos[id][0],pos[id][1],pos[id][2],v);
-
-	// add unique vertices to list of vertices
-	nv = v.size()/NDIM;
-	k = 0;
-	for (i=0; i<nv; i++){
-		// get position of vertex
-		xi = NDIM*i;	vx = v.at(xi);
-		yi = NDIM*i+1;	vy = v.at(yi);
-		zi = NDIM*i+2;	vz = v.at(zi);
-		if (vpx.size()==0)
-			this->add_vertex(vx,vy,vz);	
-		else
-			k = this->check_vertex(vx,vy,vz);
-
-		// map particle and vertex number to k value
-		k2p.at(k) = id;
-		k2v.at(k) = i;
-	}
-
-}
-
-void voroperc::add_vertex(double vx, double vy, double vz){
-	vpx.push_back(vx);
-	vpy.push_back(vy);
-	vpz.push_back(vz);
-}
-
-
-double voroperc::check_vertex(double vx, double vy, double vz){
-	// get variables from clustertree
-	int NDIM;
-	NDIM = this->get_NDIM();
-
-	// local variables
-	int i,k;
-	double dx,dy,dz,dr;
-	double v_ep = 2e-2;
-
-
-
-
-}
-
-
-
 
 
 

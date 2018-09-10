@@ -26,8 +26,7 @@ private:
 	int NE; 					// total number of edges
 
 	// particle-to-global mapping info
-	std::vector<int> k2p;
-	std::vector<int> k2v;
+
 
 	// vertex positions in global coodinate system
 	std::vector<double> vpx;
@@ -70,7 +69,6 @@ public:
 
 	// get voronoi vertex information
 	void get_voro(int printit);
-	void merge_vertices(int id, voro::voronoicell_neighbor& c);
 
 	// setup lattice for percolation
 
