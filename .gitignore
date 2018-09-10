@@ -1,0 +1,7 @@
+*.o
+*.exe
+*.png
+*~
+*.img
+*.jpg
+.DS_Store
