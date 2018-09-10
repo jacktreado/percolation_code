@@ -179,7 +179,7 @@ void voroperc::merge_vertices(int id, voronoicell_neighbor& c){
 	// get information about computed voronoi cell
 	c.neighbors(neigh);
 	c.face_vertices(f_vert);
-	c.vertices(x,y,z,v);
+	c.vertices(pos[id][0],pos[id][1],pos[id][2],v);
 
 	// add unique vertices to list of vertices
 
