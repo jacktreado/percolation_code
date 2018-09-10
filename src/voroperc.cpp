@@ -34,6 +34,7 @@ voroperc::voroperc(int np) : voidcluster(np,1,3,6){
 	this->init_NFp(np);
 
 	// initialize vector arrays
+	vface = new vector<int>[np];
 	vpx = new vector<double>[np];
 	vpy = new vector<double>[np];
 	vpz = new vector<double>[np];
@@ -42,13 +43,13 @@ voroperc::voroperc(int np) : voidcluster(np,1,3,6){
 
 voroperc::~voroperc(){
 	// clear contents of vectors
-	vpx.clear();
-	vpy.clear();
-	vpz.clear();
+	vx.clear();
+	vy.clear();
+	vz.clear();
 
-	epx.clear();
-	epy.clear();
-	epz.clear();
+	ex.clear();
+	ey.clear();
+	ez.clear();
 
 	cpax.clear();
 	cpay.clear();
@@ -59,13 +60,66 @@ voroperc::~voroperc(){
 	delete [] NEp;
 	delete [] NFp;
 
+	// delete vector arrays
+	int i,f;
+	for (i=0; i<NP; i++){
+		vface[i].clear();
+		vpx[i].clear();
+		vpy[i].clear();
+		vpz[i].clear();
+	}
+	delete [] vface;
+	delete [] vpx;
+	delete [] vpy;
+	delete [] vpz;
+
 	// close stream objects
 	if (xyzobj.is_open())
 		xyzobj.close();
 }
 
 
+// Voronoi vertex access
+void output_vpp_stats(voronoicell_neighbor& v, double x, double y, double z){
+	int nvertices = 0;
+	vector<double> vec;
+	v.vertices(x,y,z,vec);
+	nvertices = vec.size();
 
+	// Output vertex-based statistics
+	cout << endl;
+	cout << "Vertex global positions from vector : ";
+	for (int i=0; i<nvertices; i+=3){
+		cout << "(";
+		cout << vec.at(i)-x << ", ";
+		cout << vec.at(i+1)-y << ", ";
+		cout << vec.at(i+2)-z << ") ";
+	}
+	cout << endl;
+	cout << endl;
+	printf("Total vertices      		: %d\n",nvertices);	
+	printf("Vertex local positions    	: ");v.output_vertices();puts("");
+	printf("Vertex orders      		  	: ");v.output_vertex_orders();puts("");
+	printf("Max rad. sq. vertex 		: %g\n\n",0.25*v.max_radius_squared());
+
+	// Output edge-based statistics
+	printf("Total edges         		: %d\n",v.number_of_edges());
+	printf("Total edge distance 		: %g\n",v.total_edge_distance());
+	printf("Face perimeters     		: ");v.output_face_perimeters();puts("\n");
+
+	// Output face-based statistics
+	printf("Total faces         		: %d\n",v.number_of_faces());
+	printf("Surface area        		: %g\n",v.surface_area());
+	printf("Face freq. table    		: ");v.output_face_freq_table();puts("");
+	printf("Face orders         		: ");v.output_face_orders();puts("");
+	printf("Face areas          		: ");v.output_face_areas();puts("");
+ 	printf("Face normals        		: ");v.output_normals();puts("");
+	printf("Face vertices       		: ");v.output_face_vertices();puts("\n");
+
+	v.centroid(x,y,z);
+	printf("Volume              : %g\n"
+		   "Centroid vector     : (%g,%g,%g)\n",v.volume(),x,y,z);
+}
 
 void voroperc::get_voro(int printit){
 	// get variables from clustertree
@@ -111,7 +165,7 @@ void voroperc::get_voro(int printit){
 
 		// get number of vertices/edges/faces per particles
 		nvtmp = v.size()/3;
-		netmp = c.number_of_edge();
+		netmp = c.number_of_edges();
 		nftmp = c.number_of_faces();
 		this->set_NVp(id,nvtmp);
 		this->set_NEp(id,netmp);
@@ -124,6 +178,10 @@ void voroperc::get_voro(int printit){
 			cout << "; y = " << y << ", pos[" << id << "][1] = " << pos[id][1];
 			cout << "; z = " << z << ", pos[" << id << "][2] = " << pos[id][2];
 			cout << endl;
+			cout << "printing neigh vector: " << endl;
+			for (i=0; i<neigh.size(); i++)
+				cout << setw(8) << neigh[i];
+			cout << endl;
 			output_vpp_stats(c,x,y,z);
 			cout << endl << endl;
 
@@ -131,70 +189,58 @@ void voroperc::get_voro(int printit){
 				this->print_vertices_xyz(id,c);
 		}
 
-		// store neighbors for each face on each particle
-		for (k=0; k<nvtmp; k++){
-			kxi = NDIM*k;   vxtmp = v[kxi];
-			kyi = NDIM*k+1;	vytmp = v[kyi];
-			kzi = NDIM*k+2;	vztmp = v[kzi];
-
-			vpx[id].push_back(vxtmp);
-			vpy[id].push_back(vytmp);
-			vpz[id].push_back(vztmp);
-		}
+		// store particle vertex/face information		
+		// this->store_face_neighbors(id,neigh);
+		// this->store_face_vertices(id,f_vert);
+		this->store_particle_vertices(id,v);
 
 
 	} while(cl.inc());
 }
 
 
+// auxilliary functions for get_voro
+void voroperc::store_face_neighbors(int id, vector<int>& neigh){
+
+
+}
+
+void voroperc::store_face_vertices(int id, vector<int>& f_vert){
 
 
 
+}
+
+void voroperc::store_particle_vertices(int id, vector<double>& v){
+	// get variables from clustertree
+	int NDIM;
+	NDIM = this->get_NDIM();
+
+	// local variables
+	int k,nvtmp,kxi,kyi,kzi;
+	double vxtmp,vytmp,vztmp;
+	nvtmp = v.size()/NDIM;
+
+	// store neighbors for each face on each particle
+	for (k=0; k<nvtmp; k++){
+		kxi = NDIM*k;   vxtmp = v[kxi];
+		kyi = NDIM*k+1;	vytmp = v[kyi];
+		kzi = NDIM*k+2;	vztmp = v[kzi];
+	
+		if ( (k == 0 && vpx[id].size() == 0) || k > 0 ){
+			vpx[id].push_back(vxtmp);
+			vpy[id].push_back(vytmp);
+			vpz[id].push_back(vztmp);
+		}
+		else{
+			cout << "trying to push_back vertices on pre-allocated vector vpx, ending..." << endl;
+			throw;
+		}
+	}
+}
 
 
 // PRINTING INFO
-
-// Voronoi vertex access
-void output_vpp_stats(voronoicell_neighbor& v, double x, double y, double z){
-	int nvertices = 0;
-	vector<double> vec;
-	v.vertices(x,y,z,vec);
-	nvertices = vec.size();
-
-	// Output vertex-based statistics
-	cout << endl;
-	cout << "Vertex global positions from vector : ";
-	for (int i=0; i<nvertices; i+=3){
-		cout << "(";
-		cout << vec.at(i)-x << ", ";
-		cout << vec.at(i+1)-y << ", ";
-		cout << vec.at(i+2)-z << ") ";
-	}
-	cout << endl;
-	cout << endl;
-	printf("Total vertices      		: %d\n",nvertices);	
-	printf("Vertex local positions    	: ");v.output_vertices();puts("");
-	printf("Vertex orders      		  	: ");v.output_vertex_orders();puts("");
-	printf("Max rad. sq. vertex 		: %g\n\n",0.25*v.max_radius_squared());
-
-	// Output edge-based statistics
-	printf("Total edges         		: %d\n",v.number_of_edges());
-	printf("Total edge distance 		: %g\n",v.total_edge_distance());
-	printf("Face perimeters     		: ");v.output_face_perimeters();puts("\n");
-
-	// Output face-based statistics
-	printf("Total faces         		: %d\n",v.number_of_faces());
-	printf("Surface area        		: %g\n",v.surface_area());
-	printf("Face freq. table    		: ");v.output_face_freq_table();puts("");
-	printf("Face orders         		: ");v.output_face_orders();puts("");
-	printf("Face areas          		: ");v.output_face_areas();puts("");
- 	printf("Face normals        		: ");v.output_normals();puts("");
-	printf("Face vertices       		: ");v.output_face_vertices();puts("\n");
-
-	v.centroid(x,y,z);
-	printf("Volume              : %g\n"
-		   "Centroid vector     : (%g,%g,%g)\n",v.volume(),x,y,z);
-}
 
 
 // Print system to xyz

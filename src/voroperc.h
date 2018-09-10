@@ -26,6 +26,8 @@ private:
 	int NE; 					// total number of edges
 
 	// particle-to-global mapping info
+	// std::vector< std::vector<int> >* facen;
+	std::vector<int>* vface;
 	std::vector<double>* vpx;
 	std::vector<double>* vpy;
 	std::vector<double>* vpz;
@@ -71,6 +73,9 @@ public:
 
 	// get voronoi vertex information
 	void get_voro(int printit);
+	void store_particle_vertices(int id, std::vector<double>& v);
+	void store_face_neighbors(int id, std::vector<int>& neigh);
+	void store_face_vertices(int id, std::vector<int>& f_vert);
 
 	// setup lattice for percolation
 
