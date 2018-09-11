@@ -27,7 +27,7 @@ private:
 
 	// particle-to-global mapping info
 	std::vector<int>* facen;
-	std::vector<int>* vface;
+	std::vector<int>** vface;
 	std::vector<double>* vpx;
 	std::vector<double>* vpy;
 	std::vector<double>* vpz;
@@ -61,15 +61,17 @@ public:
 	// setters
 	void set_NV(int val) { NV = val; };
 	void set_NE(int val) { NE = val; };
-	void set_NVp(int id, int val) { if (NVp != nullptr) {NVp[id] = val;} else {cout << "cannot set, not nullptr\n"; throw;} };
-	void set_NEp(int id, int val) { if (NEp != nullptr) {NEp[id] = val;} else {cout << "cannot set, not nullptr\n"; throw;} };
-	void set_NFp(int id, int val) { if (NFp != nullptr) {NFp[id] = val;} else {cout << "cannot set, not nullptr\n"; throw;} };
+	void set_NVp(int id, int val) { if (NVp != nullptr) {NVp[id] = val;} else {cout << "cannot set, nullptr\n"; throw;} };
+	void set_NEp(int id, int val) { if (NEp != nullptr) {NEp[id] = val;} else {cout << "cannot set, nullptr\n"; throw;} };
+	void set_NFp(int id, int val) { if (NFp != nullptr) {NFp[id] = val;} else {cout << "cannot set, nullptr\n"; throw;} };
+
 
 	
 	// ptr initialization
-	void init_NVp(int val){ if (NVp == nullptr) {NVp = new int[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
-	void init_NEp(int val){ if (NEp == nullptr) {NEp = new int[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
-	void init_NFp(int val){ if (NFp == nullptr) {NFp = new int[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
+	void init_NVp(int val) { if (NVp == nullptr) {NVp = new int[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
+	void init_NEp(int val) { if (NEp == nullptr) {NEp = new int[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
+	void init_NFp(int val) { if (NFp == nullptr) {NFp = new int[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
+	void init_vface(int id, int val) { if (vface[id] == nullptr) {vface[id] = new std::vector<int>[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
 
 	// get voronoi vertex information
 	void get_voro(int printit);
@@ -91,6 +93,7 @@ public:
 		}
 	}
 	void print_vertices_xyz(int id, voro::voronoicell_neighbor& c);
+	void print_face_vectors();
 };
 
 

@@ -35,10 +35,17 @@ voroperc::voroperc(int np) : voidcluster(np,1,3,6){
 
 	// initialize vector arrays
 	facen = new vector<int>[np];
-	vface = new vector<int>[np];
+	vface = new vector<int>*[np];
 	vpx = new vector<double>[np];
 	vpy = new vector<double>[np];
 	vpz = new vector<double>[np];
+
+	for (int i=0; i<NP; i++){
+		NVp[i] = 0;
+		NEp[i] = 0;
+		NFp[i] = 0;
+		vface[i] = nullptr;
+	}
 }
 
 
@@ -55,17 +62,14 @@ voroperc::~voroperc(){
 	cpax.clear();
 	cpay.clear();
 	cpaz.clear();
-
-	// delete dynamically allocated memory
-	delete [] NVp;
-	delete [] NEp;
-	delete [] NFp;
-
+	
 	// delete vector arrays
 	int i,f;
 	for (i=0; i<NP; i++){
 		facen[i].clear();
-		vface[i].clear();
+		for (f=0; f<NFp[i]; f++)
+			vface[i][f].clear();
+		delete [] vface[i];
 		vpx[i].clear();
 		vpy[i].clear();
 		vpz[i].clear();
@@ -75,6 +79,9 @@ voroperc::~voroperc(){
 	delete [] vpx;
 	delete [] vpy;
 	delete [] vpz;
+	delete [] NVp;
+	delete [] NEp;
+	delete [] NFp;
 
 	// close stream objects
 	if (xyzobj.is_open())
@@ -196,15 +203,16 @@ void voroperc::get_voro(int printit){
 				this->print_vertices_xyz(id,c);
 		}
 
-		// store particle vertex/face information		
-		// this->store_face_neighbors(id,neigh);
-		// this->store_face_vertices(id,f_vert);
-		// this->store_particle_vertices(id,v);
+		// store particle vertex/face information
+		cout << "creating face vectors..." << endl;		
+		this->store_face_neighbors(id,neigh);
+		this->store_face_vertices(id,f_vert);
+		this->store_particle_vertices(id,v);
 	} while(cl.inc());
 
 	if (printit == 1){
 		cout << endl << endl;
-		// this->print_face_vectors();
+		this->print_face_vectors();
 	}
 }
 
@@ -217,29 +225,48 @@ void voroperc::store_face_neighbors(int id, vector<int>& neigh){
 
 void voroperc::store_face_vertices(int id, vector<int>& f_vert){
 	// local variables
-	int i,j,f;
+	int i,j,f,v,k;
 	int nf = f_vert.size();
 	int nvf = 0;
 	int vtmp = 0;
+	int kmax = 2*nf;
 
-	// initialize vface to have NVp[id] vertices
-	vface[id].resize(NVp[id]);
+	// initialize vface[id] to have NFp[id] faces 
+	this->init_vface(id,NFp[id]);
 
+	// loop over f_vert vector, store faces for each vertex v
 	i = 0;
 	f = 0;
-	while(i < nf){		
+	k = 0;
+	while(i < nf && k < kmax){		
+		// get number of vertices for face f		
 		nvf = f_vert[i];
+		cout << "nvf = " << nvf << endl;
+		cout << "i = " << i << endl << endl;
+
+		// loop over vertices on face f
 		for (j=0; j<nvf; j++){
-			// increment f_vert locations
+			// increment f_vert index
 			i++;
 
-			// get vertex
+			// get vertex number
 			v = f_vert[i];
 
-			// store vertex
-			vface[id][v] = f;
+			// store vertex number in face position
+			vface[id][f].push_back(v);
 		}
+		// increment i by 1 to get to next face
+		i++;
+
+		// increment face index
 		f++;
+
+		// increment failsafe k
+		k++;
+	}
+	if (k == kmax){
+		cout << "ERROR: store_face_vertices loop did not execute properly, exiting..." << endl;
+		throw;
 	}
 }
 
@@ -298,6 +325,51 @@ void voroperc::print_vertices_xyz(int id, voronoicell_neighbor& c){
 			xyzobj << setw(w) << v.at(NDIM*i+d);
 		xyzobj << setw(w) << 0.01;
 		xyzobj << endl;
+	}
+}
+
+// Print face vector info
+void voroperc::print_face_vectors(){
+	int i,j,k;
+
+	cout << endl;
+	cout << "Face neighbors: " << endl;
+	for (i=0; i<NP; i++){
+		cout << "facen[" << i << "] = ";
+		for (j=0; j<facen[i].size(); j++)
+			cout << setw(6) << facen[i][j];
+		cout << endl;
+	}
+	cout << endl;
+	cout << "Vertex face info: " << endl;
+	for (i=0; i<NP; i++){
+		cout << "NFp[" << i << "] = " << NFp[i] << ", vface[" << i  << "]:" << endl;
+		for (j=0; j<NFp[i]; j++){
+			cout << "** face = " << j << ": ";
+			for (k=0; k<vface[i][j].size(); k++)
+				cout << setw(6) << vface[i][j][k];
+			cout << endl;
+		}
+		cout << endl;
+	}
+	cout << endl;
+	cout << "Vertices per particle: " << endl;
+	for (i=0; i<NP; i++){
+		cout << endl;
+		cout << "NVp[" << i << "] = " << NVp[i] << endl;
+		cout << "vpx[" << i <<  "]:";
+		for (j=0; j<NVp[i]; j++)
+			cout << setw(12) << vpx[i][j];
+		cout << endl;
+		cout << "vpy[" << i <<  "]:";
+		for (j=0; j<NVp[i]; j++)
+			cout << setw(12) << vpy[i][j];
+		cout << endl;
+		cout << "vpz[" << i <<  "]:";
+		for (j=0; j<NVp[i]; j++)
+			cout << setw(12) << vpz[i][j];
+		cout << endl;
+		cout << endl;
 	}
 }
 
