@@ -26,7 +26,7 @@ private:
 	int NE; 					// total number of edges
 
 	// particle-to-global mapping info
-	// std::vector< std::vector<int> >* facen;
+	std::vector<int>* facen;
 	std::vector<int>* vface;
 	std::vector<double>* vpx;
 	std::vector<double>* vpy;

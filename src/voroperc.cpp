@@ -34,6 +34,7 @@ voroperc::voroperc(int np) : voidcluster(np,1,3,6){
 	this->init_NFp(np);
 
 	// initialize vector arrays
+	facen = new vector<int>[np];
 	vface = new vector<int>[np];
 	vpx = new vector<double>[np];
 	vpy = new vector<double>[np];
@@ -63,11 +64,13 @@ voroperc::~voroperc(){
 	// delete vector arrays
 	int i,f;
 	for (i=0; i<NP; i++){
+		facen[i].clear();
 		vface[i].clear();
 		vpx[i].clear();
 		vpy[i].clear();
 		vpz[i].clear();
 	}
+	delete [] facen;
 	delete [] vface;
 	delete [] vpx;
 	delete [] vpy;
@@ -182,6 +185,10 @@ void voroperc::get_voro(int printit){
 			for (i=0; i<neigh.size(); i++)
 				cout << setw(8) << neigh[i];
 			cout << endl;
+			cout << "printing f_vert vector: " << endl;
+			for (i=0; i<f_vert.size(); i++)
+				cout << setw(8) << f_vert[i];
+			cout << endl;
 			output_vpp_stats(c,x,y,z);
 			cout << endl << endl;
 
@@ -192,23 +199,48 @@ void voroperc::get_voro(int printit){
 		// store particle vertex/face information		
 		// this->store_face_neighbors(id,neigh);
 		// this->store_face_vertices(id,f_vert);
-		this->store_particle_vertices(id,v);
-
-
+		// this->store_particle_vertices(id,v);
 	} while(cl.inc());
+
+	if (printit == 1){
+		cout << endl << endl;
+		// this->print_face_vectors();
+	}
 }
 
 
 // auxilliary functions for get_voro
 void voroperc::store_face_neighbors(int id, vector<int>& neigh){
-
-
+	facen[id].resize(neigh.size());
+	facen[id] = neigh;
 }
 
 void voroperc::store_face_vertices(int id, vector<int>& f_vert){
+	// local variables
+	int i,j,f;
+	int nf = f_vert.size();
+	int nvf = 0;
+	int vtmp = 0;
 
+	// initialize vface to have NVp[id] vertices
+	vface[id].resize(NVp[id]);
 
+	i = 0;
+	f = 0;
+	while(i < nf){		
+		nvf = f_vert[i];
+		for (j=0; j<nvf; j++){
+			// increment f_vert locations
+			i++;
 
+			// get vertex
+			v = f_vert[i];
+
+			// store vertex
+			vface[id][v] = f;
+		}
+		f++;
+	}
 }
 
 void voroperc::store_particle_vertices(int id, vector<double>& v){
