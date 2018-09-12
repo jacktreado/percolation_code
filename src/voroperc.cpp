@@ -50,6 +50,7 @@ voroperc::voroperc(int np) : voidcluster(np,1,3,6){
 
 
 voroperc::~voroperc(){
+	cout << "in voroperc constructor" << endl;
 	// clear contents of vectors
 	vx.clear();
 	vy.clear();
@@ -72,8 +73,9 @@ voroperc::~voroperc(){
 		delete [] vface[i];
 		vpx[i].clear();
 		vpy[i].clear();
-		vpz[i].clear();
+		vpz[i].clear();		
 	}
+	delete [] vneigh;
 	delete [] facen;
 	delete [] vface;
 	delete [] vpx;
@@ -82,6 +84,21 @@ voroperc::~voroperc(){
 	delete [] NVp;
 	delete [] NEp;
 	delete [] NFp;
+
+	// delete face pair map
+	int nfp = vmap.size();
+	for (i=0; i<nfp; i++){
+		delete [] vmap[i];
+		vmap[i] = nullptr;
+	}
+	vmap.clear();
+
+	// delete v neighbor map
+	int nv = vn_map.size();
+	for (i=0; i<nv; i++){
+		vn_map[i].clear();
+	}
+	vn_map.clear();
 
 	// close stream objects
 	if (xyzobj.is_open())
@@ -214,6 +231,25 @@ void voroperc::get_voro(int printit){
 		cout << endl << endl;
 		this->print_face_vectors();
 	}
+
+	// merge vertices based on faces
+	this->merge_vertices();
+	this->update_NV();
+
+	if (printit == 1){
+		cout << endl << endl;
+		this->print_global_vertices();
+
+		// print vn_map after vertex merge
+		for (i=0; i<NV; i++){
+			cout << "vn_map[" << i << "]: ";
+			for (j=0; j<vn_map[i].size(); j+=2)
+				cout << "(" << vn_map[i][j] << "," << vn_map[i][j+1] << ") ";
+			cout << ";";
+			cout << endl;
+		}	
+	}
+
 }
 
 
@@ -241,8 +277,6 @@ void voroperc::store_face_vertices(int id, vector<int>& f_vert){
 	while(i < nf && k < kmax){		
 		// get number of vertices for face f		
 		nvf = f_vert[i];
-		cout << "nvf = " << nvf << endl;
-		cout << "i = " << i << endl << endl;
 
 		// loop over vertices on face f
 		for (j=0; j<nvf; j++){
@@ -299,6 +333,429 @@ void voroperc::store_particle_vertices(int id, vector<double>& v){
 }
 
 
+// MERGE VERTICES FUNCTION
+void voroperc::merge_vertices(){
+	// local variables
+	int i,f,g;
+	int fnp,fnf,red;
+
+	// loop over particles, add vertices to global list
+	for (i=0; i<NP; i++){
+		// loop over faces, get neighboring faces
+		for (f=0; f<NFp[i]; f++){
+			// merge face f with face fnf on neighboring particle fnp
+
+			// check whether particle i shares multiple faces with particle g
+			g = this->check_multiple_faces(i,f);
+			if (g == -1){
+				fnp = facen[i][f];
+				fnf = this->get_neighboring_face(i,f,fnp);				
+			}
+			else if (g >= 0){
+				fnp = g;
+				fnf = this->get_closest_face(i,f,fnp);
+			}
+			else {
+				cout << "g returned negative in merge_vertices at i = " << i << ", f = " << f << ", ending..." << endl;
+				throw;
+			}
+
+			// check if (i,f) & (fnp,fnf) pairing is redundant
+			if (vmap.size() == 0)
+				red = 0;
+			else
+				red = this->check_redundancy(i,f,fnp,fnf);
+
+			// if not redundant, then combine vertices on (i,f) and (fnp,fnf)
+			if (red == 0)
+				this->combine_faces(i,f,fnp,fnf);
+			else
+				this->add_vertex_neighbors(i,f);
+		}	
+	}
+
+}
+
+// auxilliary functions for merge_vertices
+int voroperc::check_multiple_faces(int i, int f){
+	// local variables
+	int j,g,gtmp;
+
+	// let g be the neighbor of face f
+	g = facen[i][f];
+
+	// loop over faces on i, check to see if any other faces adjacent to g
+	for (j=0; j<NFp[i]; j++){
+		if (j != f){
+			gtmp = facen[i][j];
+
+			// if gtmp = g, at least duplicate, so return
+			if (gtmp == g)
+				return g;
+		}
+	}
+
+	// if you get this far, no duplicates
+	g = -1;
+	return g;
+}
+
+int voroperc::get_neighboring_face(int i, int f, int fnp){
+	// local variables
+	int k;
+
+	// loop over faces on fnp, check adjacency to particle i			
+	for (k=0; k<NFp[fnp]; k++){
+		if (facen[fnp][k] == i)
+			return k;
+	}
+
+	// if you get this far, throw an error
+	cout << "ERROR: no adjacency found on face opposite i = " << i << ", f = " << f << "...ending." << endl;
+	throw;
+}
+
+int voroperc::get_closest_face(int i, int f, int fnp){
+	// there are multiple adjacencies for particle i that are on particle fnp,
+	// so loop over multiples and check which one is closest to face (i,f)
+	vector<double> f1com,f2com;
+	int j,nadj,mindistj;
+	double dx,dy,dz,dr,mindist,mindist0;
+
+	// get com of f1
+	this->calc_face_com(i,f,f1com);
+
+	// loop over adjacents to faces on fnp, determine min distance to (i,f)
+	mindist0 = 10*B[0];
+	mindist = mindist0;
+	nadj = facen[fnp].size();
+	for (j=0; j<nadj; j++){
+		if (facen[fnp][j]==i){			
+			// get face com of (fnp,j)
+			this->calc_face_com(fnp,j,f2com);
+
+			// get x distance
+			dx = f2com[0]-f1com[0];
+			dx = dx - B[0]*round(dx/B[0]);
+
+			// get x distance
+			dy = f2com[1]-f1com[1];
+			dy = dy - B[1]*round(dy/B[1]);
+
+			// get z distance
+			dz = f2com[2]-f1com[2];
+			dz = dz - B[2]*round(dz/B[2]);
+
+			// get total distance
+			dr = sqrt(dx*dx + dy*dy + dz*dz);
+
+			// if distance is less than min distance, update min distance
+			if (dr < mindist){
+				mindist = dr;
+				mindistj = j;
+			}
+		}
+	}
+
+	if (mindist < mindist0)
+		return mindistj;
+	else{
+		cout << "ERROR: mindist not updated in get_closest_face, ending..." << endl;
+		throw;
+	}
+}
+
+void voroperc::calc_face_com(int i, int f, vector<double>& com){
+	// get variables from clustertree
+	int NDIM;
+	NDIM = this->get_NDIM();
+
+	// resize com
+	com.resize(NDIM);
+
+	// local variables
+	int j,vi,nv;
+	double xsum,ysum,zsum;
+
+	// calculate avg x,y,z pos
+	xsum = 0;
+	ysum = 0;
+	zsum = 0;
+	nv = vface[i][f].size();
+	for (j=0; j<nv; j++){
+		vi = vface[i][f][j];
+		xsum += vpx[i][vi];
+		ysum += vpy[i][vi];
+		zsum += vpz[i][vi];
+	}
+	xsum /= nv;
+	ysum /= nv;
+	zsum /= nv;
+
+	// store com
+	com[0] = xsum;
+	com[1] = ysum;
+	com[2] = zsum;
+}
+
+int voroperc::check_redundancy(int i, int f, int fnp, int fnf){
+	int nfp,itmp,ftmp,jtmp,gtmp;
+	bool revchecked, thischecked;
+
+	// initialize booleans to false
+	revchecked = false;
+	thischecked = false;
+
+	// loop over prior matches, check for repeats
+	nfp = vmap.size();
+	for (i=0; i<nfp; i++){
+		// get map values
+		itmp = vmap[i][0];
+		ftmp = vmap[i][1];
+		jtmp = vmap[i][2];
+		gtmp = vmap[i][3];
+
+		// check redundancy
+		revchecked = (i==jtmp && f==gtmp && fnp==itmp && fnf==ftmp);
+		thischecked = (i==itmp && f==ftmp && fnp==jtmp && fnf==gtmp);
+
+		if (revchecked)
+			return 1;
+		else if (thischecked)
+			return 1;
+	}
+
+	// if you get this far, no redundancies
+	return 0;
+}
+
+void voroperc::combine_faces(int i, int f, int fnp, int fnf){
+	// loop over vertices, add vertices to global list, make note
+	// of which vertices are comprised of which faces
+	int k,nv,nv1,nv2,nfp,vi,merge_vertex,vm,vtrue;
+	int* p;
+	vector<int> vtmp;
+
+	// verify that number of vertices are same
+	nv1 = vface[i][f].size();
+	nv2 = vface[fnp][fnf].size();
+
+	if (nv1 != nv2){
+		cout << "number of vertices do not match between i = " << i << ", f = " << f;
+		cout << " and fnp = " << fnp << ", fnf = " << fnf << endl;
+		cout << "Ending..." << endl;
+		throw;
+	}
+
+	// count number of merged vertices
+	vm = 0;
+
+	// if numbers are the same, add to vertex list from face (i,f)	
+	for (k=0; k<nv1; k++){
+		vi = vface[i][f][k];
+		merge_vertex = this->check_vertex_history(i,f,vi);
+		if (merge_vertex == 1){
+			// check to see if already on master list
+			vtrue = this->get_vtrue(i,vi);
+
+			if (vtrue == -1){
+				// add vertices to global list
+				vx.push_back(vpx[i][vi]);
+				vy.push_back(vpy[i][vi]);
+				vz.push_back(vpz[i][vi]);
+				vtrue = vx.size()-1;
+
+				// incrememnt vm
+				vm++;
+
+				// add another row to vn_map
+				vn_map.push_back(vtmp);			
+
+				// add vertex neighbors
+				this->add_vertex_neighbors(vtrue,vi,i,f);
+
+				if (vn_map[vtrue].size() == 0){
+					cout << "* neighbors not added at vertex " << vtrue << " : "; 
+					cout << "i=" << i << ", f=" << f << ", v=" << vi << endl;
+					throw;
+				}
+			}
+			else
+				this->add_vertex_neighbors(vtrue,vi,i,f);
+		}
+		else{
+			vtrue = this->get_vtrue(i,vi);
+			this->add_vertex_neighbors(vtrue,vi,i,f);
+		}
+	}
+
+	// add vertex neighbors from other face
+	this->add_vertex_neighbors(fnp,fnf);
+
+	// add info about faces if at least 1 vertex was merged
+	if (vm > 0){
+		nfp = vmap.size();			// number of face pairs already in vector
+		vmap.push_back(p);			// push pointer back to vector, increase size by nfp+1
+		vmap[nfp] = new int[4];		// because index from 0, vmap[nfp] needs to be initialized
+		vmap[nfp][0] = i;			// first column: particle i
+		vmap[nfp][1] = f;			// second column: face f
+		vmap[nfp][2] = fnp;			// third column: particle fnp
+		vmap[nfp][3] = fnf;			// fourth column: face fnf
+	}
+}
+
+int voroperc::check_vertex_history(int i, int f, int vi){
+	// local variables
+	int j,k,nv,nfp,ftmp;
+	bool already_merged;
+	vector<int> facelist;
+
+	// get all faces that vi is a part of on particle i
+	for (j=0; j<NFp[i]; j++){
+		// do not check f
+		if (j != f){
+			// loop over vertices on face j
+			nv = vface[i][j].size();			
+			for (k=0; k<nv; k++){
+				// if vfacen[i][j][k] = vi, add to face list
+				if (vface[i][j][k] == vi)
+					facelist.push_back(j);
+			}
+		}
+	}
+
+	// throw error if facelist not populated
+	if (facelist.size() == 0){
+		cout << "error populating list of faces with vertex " << vi << "on (" << i << "," << f << ") ending..." << endl;
+		throw;
+	}
+
+	// check facelist to see if any faces have been merged previously
+	nv = facelist.size();
+	for (k=0; k<nv; k++){
+		// get face k that vi is a part of
+		ftmp = facelist[k];
+
+		// get number of face pairs in map
+		nfp = vmap.size();
+
+		// loop over map, check for (i,ftmp) pairs in either half of matrix
+		for (j=0; j<nfp; j++){
+			already_merged = (vmap[j][0] == i && vmap[j][1] == ftmp);
+			already_merged = already_merged || (vmap[j][2] == i && vmap[j][3] == ftmp);
+			if (already_merged)
+				return 0;
+		}
+	}
+
+	// if you made it this far, none of the other faces with vertex vi have been merged,
+	// so return 1 to merge
+	return 1;
+}
+
+int voroperc::get_vtrue(int i, int vi){
+	// local variables
+	double vix,viy,viz,dx,dy,dz,dr,mindist0,mindist;
+	int j,vtrue,nv;
+
+	vix = vpx[i][vi];
+	viy = vpy[i][vi];
+	viz = vpz[i][vi];
+
+	// loop over true vertices, get min dist
+	mindist0 = 10*B[0];
+	mindist = mindist0;
+	nv = vx.size();
+	for (j=0; j<nv; j++){
+		// get x distance
+		dx = vx[j]-vix;
+		dx = dx - B[0]*round(dx/B[0]);
+
+		// get x distance
+		dy = vy[j]-viy;
+		dy = dy - B[1]*round(dy/B[1]);
+
+		// get z distance
+		dz = vz[j]-viz;
+		dz = dz - B[2]*round(dz/B[2]);
+
+		// get total distance
+		dr = sqrt(dx*dx + dy*dy + dz*dz);
+
+		if (dr < mindist){			
+			cout << "** i = " << i << ", vi = " << vi << ", mindist = " << mindist << ", dr = " << dr;
+			mindist = dr;
+			vtrue = j;
+			cout << "; vtrue = " << vtrue << endl;
+		}
+	}
+
+	if (abs(mindist-mindist0) < 1e-15){
+		// cout << "ERROR: true vertex not found for i = " << i << ", vi = " << vi << "; check that it exists." << endl;
+		return -1;
+	}
+	else if (mindist > 1e-14){
+		// cout << "ERROR: true vertex not very close to to i = " << i << ", vi = " << vi << "; mindist = " << mindist << endl;
+		return -1;
+	}
+	else{
+		return vtrue;
+	}
+}
+
+void voroperc::add_vertex_neighbors(int vtrue, int vi, int i, int f){
+	// local variables
+	int j,nfv,fwd,bwd,vfwd,vbwd;
+
+	// loop over face (i,f), add neighbors of vi on (i,f)
+	// to vn_map[vtrue]
+	nfv = vface[i][f].size();
+	for (j=0; j<nfv; j++){
+		if (vface[i][f][j]==vi){
+			// get fwd and bwd indices
+			fwd = j + 1;
+			if (fwd == nfv)
+				fwd = 0;
+			bwd = j - 1;
+			if (bwd == -1)
+				bwd = nfv-1;
+
+			// get neighboring vertices
+			vfwd = vface[i][f][fwd];
+			vbwd = vface[i][f][bwd];
+
+			// add to vn_map
+			vn_map[vtrue].push_back(i);
+			vn_map[vtrue].push_back(vbwd);
+			vn_map[vtrue].push_back(i);
+			vn_map[vtrue].push_back(vfwd);
+			break;
+		}
+	}
+}
+
+void voroperc::add_vertex_neighbors(int i, int f){
+	int j,nv,vj,vtrue;
+
+	// loop over all vertices on a given face, get vtrue, add neighbors to vn_map
+	nv = vface[i][f].size();
+	for (j=0; j<nv; j++){
+		vj = vface[i][f][j];
+		vtrue = get_vtrue(i,vj);
+		this->add_vertex_neighbors(vtrue,vj,i,f);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
 // PRINTING INFO
 
 
@@ -320,7 +777,7 @@ void voroperc::print_vertices_xyz(int id, voronoicell_neighbor& c){
 	xyzobj << '\t';
 	xyzobj << "Properties=species:S:1:pos:R:3:radius:R:1" << endl;
 	for (i=0; i<NVp[id]; i++){
-		xyzobj << setw(w) << "X" << id;
+		xyzobj << "Type_" << id;
 		for (d=0; d<NDIM; d++)
 			xyzobj << setw(w) << v.at(NDIM*i+d);
 		xyzobj << setw(w) << 0.01;
@@ -373,7 +830,52 @@ void voroperc::print_face_vectors(){
 	}
 }
 
+// Print global vertex info
+void voroperc::print_global_vertices(){
+	int i,j,dup;
+	double dx,dy,dz,dr;
 
+	cout << "Printing global vertex information: " << endl;
+	cout << "NV = " << NV << endl << endl;
+	for (i=0; i<NV; i++){
+		cout << "vertex " << i << " :";
+		cout << setw(16) << vx[i];
+		cout << setw(16) << vy[i];
+		cout << setw(16) << vz[i];
+		cout << endl;
+	}
+
+	// check for duplicates
+	dup = 0;
+	for (i=0; i<NV; i++){
+		for (j=i+1; j<NV; j++){
+			// get x distance
+			dx = vx[j]-vx[i];
+			dx = dx - B[0]*round(dx/B[0]);
+
+			// get x distance
+			dy = vy[j]-vy[i];
+			dy = dy - B[1]*round(dy/B[1]);
+
+			// get z distance
+			dz = vz[j]-vz[i];
+			dz = dz - B[2]*round(dz/B[2]);
+
+			// get total distance
+			dr = sqrt(dx*dx + dy*dy + dz*dz);
+
+			if (dr < 1e-8){
+				cout << "duplicate found at i=" << i << "j=" << j;
+				cout << "; dr = " << dr << endl;
+				dup++;
+			}
+		}
+	}
+
+	if (dup == 0)
+		cout << "No duplicates found in global vertex positions" << endl;
+	cout << endl << endl;
+}
 
 
 

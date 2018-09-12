@@ -31,6 +31,9 @@ private:
 	std::vector<double>* vpx;
 	std::vector<double>* vpy;
 	std::vector<double>* vpz;
+	std::vector<int*> vmap;
+	std::vector< std::vector<int> > vn_map;
+	std::vector<int>* vneigh;
 
 	// vertex positions in global coodinate system
 	std::vector<double> vx;
@@ -57,6 +60,7 @@ public:
 	// getters
 	int get_NV(){ return NV; };
 	int get_NE(){ return NE; };
+	void update_NV(){ NV = vx.size(); }
 
 	// setters
 	void set_NV(int val) { NV = val; };
@@ -64,8 +68,6 @@ public:
 	void set_NVp(int id, int val) { if (NVp != nullptr) {NVp[id] = val;} else {cout << "cannot set, nullptr\n"; throw;} };
 	void set_NEp(int id, int val) { if (NEp != nullptr) {NEp[id] = val;} else {cout << "cannot set, nullptr\n"; throw;} };
 	void set_NFp(int id, int val) { if (NFp != nullptr) {NFp[id] = val;} else {cout << "cannot set, nullptr\n"; throw;} };
-
-
 	
 	// ptr initialization
 	void init_NVp(int val) { if (NVp == nullptr) {NVp = new int[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
@@ -78,6 +80,19 @@ public:
 	void store_particle_vertices(int id, std::vector<double>& v);
 	void store_face_neighbors(int id, std::vector<int>& neigh);
 	void store_face_vertices(int id, std::vector<int>& f_vert);
+
+	// merge vertices from face information
+	void merge_vertices();
+	int check_multiple_faces(int i, int f);
+	int get_neighboring_face(int i, int f, int fnp);
+	int get_closest_face(int i, int f, int fnp);
+	void calc_face_com(int i, int f, std::vector<double>& com);
+	int check_redundancy(int i, int f, int fnp, int fnf);
+	void combine_faces(int i, int f, int fnp, int fnf);
+	int check_vertex_history(int i, int f, int vi);
+	int get_vtrue(int i, int vi);
+	void add_vertex_neighbors(int vtrue, int vi, int i, int f);
+	void add_vertex_neighbors(int i, int f);
 
 	// setup lattice for percolation
 
@@ -94,6 +109,7 @@ public:
 	}
 	void print_vertices_xyz(int id, voro::voronoicell_neighbor& c);
 	void print_face_vectors();
+	void print_global_vertices();
 };
 
 
