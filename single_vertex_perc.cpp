@@ -1,8 +1,6 @@
 // Single voronoi vertex percolation calc
 
-#include "clustertree.h"
-#include "voidcluster.h"
-#include "voro++.hh"
+#include "voroperc.h"
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -10,6 +8,8 @@
 #include <sstream>
 
 const double PI = 3.1415926;
+
+using namespace std;
 
 int main(int argc, char *argv[]){
 	// read in data

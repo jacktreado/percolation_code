@@ -167,6 +167,8 @@ void output_vpp_stats(voronoicell_neighbor& v, double x, double y, double z){
 }
 
 void voroperc::get_voro(){
+	cout << "IN get_voro()..." << endl;
+
 	// get variables from clustertree
 	int NDIM;
 	NDIM = this->get_NDIM();
@@ -199,10 +201,12 @@ void voroperc::get_voro(){
 	pbc = true;
 	container con(0,B[0],0,B[1],0,B[2],n,n,n,pbc,pbc,pbc,init);
 
+	cout << "** constructing voronoi cell" << endl;
 	for (i=0; i<NP; i++)
 		con.put(i,pos[i][0],pos[i][1],pos[i][2]);
 
 	// loop over all particles, get information about cells
+	cout << "** getting cell info" << endl;
 	c_loop_all cl(con);
 	if (cl.start()) do if(con.compute_cell(c,cl)) {	
 		cl.pos(x,y,z);
@@ -244,7 +248,6 @@ void voroperc::get_voro(){
 		}
 
 		// store particle vertex/face information
-		cout << "creating face vectors..." << endl;		
 		this->store_face_neighbors(id,neigh);
 		this->store_face_vertices(id,f_vert);
 		this->store_particle_vertices(id,v);
@@ -256,6 +259,7 @@ void voroperc::get_voro(){
 	}
 
 	// merge vertices based on faces
+	cout << "** merging vertices" << endl;
 	this->merge_vertices();
 	this->update_NV();
 	if (printit == 1){
@@ -263,7 +267,8 @@ void voroperc::get_voro(){
 		this->print_global_vertices();
 	}
 
-	// initialize vertex neighbor array, populate using vn_map	
+	// initialize vertex neighbor array, populate using vn_map
+	cout << "** getting vertex neighbors" << endl;
 	this->update_vertex_neighbors();
 	if (printit == 1){
 		cout << endl << endl;
@@ -279,6 +284,7 @@ void voroperc::get_voro(){
 	}
 
 	// get edge positions and neighbors based on vertex neighbors
+	cout << "** getting edges" << endl;
 	this->get_edges();
 	if (printit == 1){
 		cout << endl << endl;
@@ -294,7 +300,10 @@ void voroperc::get_voro(){
 	}
 
 	// get points of closest approach
+	cout << "** getting points of closest approach for edges" << endl;
 	this->get_cpa();
+
+	cout << "LEAVING get_voro()..." << endl;
 }
 
 
