@@ -46,6 +46,7 @@ public:
 	void set_lattice(long long int site, int val) {lattice[site] = val;};
 	void set_ptr(long long int site, int val) {ptr[site] = val;};
 	void set_nn(long long int i, int j, int val){nn[i][j] = val;};
+	void set_perc(int val) {perc = val;};
 	void reset_sys();
 	void reset_ptr();
 	int get_L() {return L;};

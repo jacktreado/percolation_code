@@ -25,10 +25,11 @@ int main(){
 	// get voronoi network (vertices & edges in global frame)
 	vpo.get_voro(1);
 
-	// setup lattice for edge percolation
-	vpo.setup_edge_perc_lattice();
-
-	// 
+	// find percolation
+	double epsilon = 1e-6;
+	double aH = 1;
+	double aL = 1e-12;
+	vpo.voro_edge_perc(epsilon,seed,aH,aL);
 
 	// that's all folks
 	return 0;

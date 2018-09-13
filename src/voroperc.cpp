@@ -883,9 +883,11 @@ void voroperc::get_edges(){
 		for (j=0; j<nvn; j++){
 			v = vneigh[i][j];		
 			if (v > i){
-				ex.push_back(0.5*(vx[i]+vx[j]));
-				ey.push_back(0.5*(vy[i]+vy[j]));
-				ez.push_back(0.5*(vz[i]+vz[j]));				
+				// ex.push_back(0.5*(vx[i]+vx[j]));
+				// ey.push_back(0.5*(vy[i]+vy[j]));
+				// ez.push_back(0.5*(vz[i]+vz[j]));	
+				// calculate edge position (relative to i)
+				this->get_edge_positions(i,v);
 				eij[i][v] = e;
 				eij[v][i] = e;
 				e++;
@@ -910,6 +912,48 @@ void voroperc::get_edges(){
 			}
 		}
 	}
+}
+
+void voroperc::get_edge_positions(int vi, int vj){
+	double dx,dy,dz;
+	double vix,viy,viz;
+	double vjx,vjy,vjz;
+
+	// get edge position taking PBCs into account
+	vix = vx[vi];	vjx = vx[vj];
+	viy = vy[vi];	vjy = vy[vj];
+	viz = vz[vi];	vjz = vy[vj];
+
+	// check if vertices are too far away
+
+	// x direction 
+	if (abs(vix-vjx)>0.5*B[0]){
+		if (vjx > vix)
+			vjx -= B[0];
+		else
+			vjx += B[0];
+	}
+
+	// x direction
+	if (abs(viy-vjy)>0.5*B[1]){
+		if (vjy > viy)
+			vjy -= B[1];
+		else
+			vjy += B[1];
+	}
+
+	// x direction
+	if (abs(viz-vjz)>0.5*B[2]){
+		if (vjz > viz)
+			vjz -= B[2];
+		else
+			vjz += B[2];
+	}
+
+	// get edge positions from translated vertices
+	ex.push_back(0.5*(vix+vjx));
+	ey.push_back(0.5*(viy+vjy));
+	ez.push_back(0.5*(viz+vjz));
 }
 
 void voroperc::get_edge_neighbors(int e, int i, int j){
@@ -942,40 +986,41 @@ void voroperc::get_ep(int e, int i, int j){
 			}
 		}
 	}
-
 }
 
 
 // LOOP OVER RADII, CHECK FOR PERCOLATION
-void voro_edge_perc(double epsilon, int seed, double aH, double aL){
+void voroperc::voro_edge_perc(double epsilon, int seed, double aH, double aL){
 	// set lattice up for edge percolation
 	this->setup_edge_perc_lattice();
 
-	// local variables
-	int e;
-	int edgeoverlap = 0;
+	// get NDIM from clustertree
+	int NDIM = this->get_NDIM();
 
 	// bisection variables
 	double check,check_new,r;
-	int kmax;
-	k = 1;
-	int kk = 1;
+	int k,kmax;
 	kmax = 1e4;
+	k = 0;
 	check = 10*epsilon;
 	check_new = check;
 	r = 0.5*(aH+aL);
-
-	// perc check variables
-	int cf = 1;
-	double subdiv = 10.0;
-	double loc,dloc;
 	int perc = 0;
 	string percdir = "NA";
+
+	// get vector edge_nn, for cluster merging
+	vector<int> edge_nn(NE);
+	for (int e=0; e<NE; e++)
+		edge_nn[e] = eneigh[e].size();	
 
 	// output information to console
 	int w = 15;
 	int prc = 5;
 	double poro; 
+	cout << "Looping over sphere radii, looking for edge percolation" << endl;
+	cout << "aH = " << aH << endl;
+	cout << "aL = " << aL << endl;
+	cout << "a = " << r << endl;
 	cout << setw(w) << "k";
 	cout << setw(w) << "r";
 	cout << setw(w) << "aH";
@@ -992,22 +1037,54 @@ void voro_edge_perc(double epsilon, int seed, double aH, double aL){
 	for (int s=0; s<12*w; s++)
 		cout << "=";
 	cout << endl;
-
-	cout << "Looping over sphere radii, looking for edge percolation" << endl;
-	while( ((check < epsilon) || perc == 0) && k < kmax ){
+	
+	while( ((check > epsilon) || perc == 0) && k < kmax){
 		check = r;
 
-		this->set_radius(r);
 		this->reset_sys();
 		this->reset_ptr();
+		this->set_radius(r);				
 		percdir = "NA";
 
 		// check intersection by edge midpoint
-		this->check_midpoint_intersect();
+		this->set_lattice_midpoint_intersect();
 
 		// check point of closest approach intersection
 		// NOTE: NEED TO CALCULATE CPA FIRST!
 		// this->check_cpa_intersect();
+
+		// merge clusters		
+		this->merge_clusters(edge_nn);
+		this->post_process_voro();
+		this->check_voro_percolation(percdir);		
+
+		// update check based on perc or not
+		if (perc == 1)
+			aL = r;
+		else
+			aH = r;
+
+		r = 0.5*(aH+aL);
+		check = abs(check-r)/r;
+		check_new = check;
+		k++;
+
+		// print info to console
+		perc = this->get_perc();
+		poro = exp(-NP*(1.33333333333)*PI*pow(r,NDIM));
+		cout << setprecision(prc) << setw(w) << k;
+		cout << setprecision(prc) << setw(w) << r;
+		cout << setprecision(prc) << setw(w) << aH;
+		cout << setprecision(prc) << setw(w) << aL;
+		cout << setprecision(prc) << setw(w) << check_new;
+		cout << setprecision(prc) << setw(w) << poro;
+		cout << setprecision(prc) << setw(w) << perc;
+		cout << setprecision(prc) << setw(w) << percdir;
+		cout << setprecision(prc) << setw(w) << this->get_cnum();
+		cout << setprecision(prc) << setw(w) << this->get_smax();
+		cout << setprecision(prc) << setw(w) << this->get_lattice_sum();
+		cout << setprecision(prc) << setw(w) << this->get_fcalls();
+		cout << endl;
 	}
 }
 
@@ -1029,14 +1106,180 @@ void voroperc::setup_edge_perc_lattice(){
  		for (f=0; f<enn; f++)
  			this->set_nn(e,f,eneigh[e][f]);
  	}
+
+ 	// Also get edge com, for perc checking
+ 	ecomx = 0;
+ 	ecomy = 0;
+ 	ecomz = 0;
+ 	for (e=0; e<NE; e++){
+ 		ecomx += ex[e];
+ 		ecomy += ey[e];
+ 		ecomz += ez[e];
+ 	}
+ 	ecomx /= NE;
+ 	ecomy /= NE;
+ 	ecomz /= NE;
 }
 
+void voroperc::set_lattice_midpoint_intersect(){
+	double dx,dy,dz,dr;
+	int e,p,pn,edgeoverlap;
 
+	// loop over edges, see if overlapping with any particles
+	for (e=0; e<NE; e++){
+		dr = 0;
+		edgeoverlap = 0;
 
+		// loop over particles adjacent to e
+		for (p=0; p<ep[e].size(); p++){
+			// get particle
+			pn = ep[e][p];
 
-// POPULATE LATTICE
+			// check distance
+			dx = ex[e] - pos[pn][0];
+			dx = dx - round(dx/B[0])*B[0];
 
+			dy = ey[e] - pos[pn][1];
+			dy = dy - round(dy/B[1])*B[1];
 
+			dz = ez[e] - pos[pn][2];
+			dz = dz - round(dz/B[2])*B[2];
+
+			dr = sqrt(dx*dx + dy*dy + dz*dz);
+			if (dr < rad[pn]){
+				edgeoverlap = 1;
+				break;
+			}
+		}
+
+		if (edgeoverlap == 1)
+			this->set_lattice(e,0);
+		else
+			this->set_lattice(e,1);
+	}
+}
+
+void voroperc::check_voro_percolation(string& percdir){
+	// local variables
+	int e;
+	double ex0,ey0,ez0;
+
+	// perc check variables
+	int cf = 1;
+	double subdiv = 10.0;
+	double loc,dloc;
+	int perc = 0;
+
+	// check percolation in X direction (post-process)
+	perc = 0;
+	cf = 1;
+	loc = 0;
+	dloc = B[0]/subdiv;
+	while(cf == 1 && loc < B[0]-dloc){
+		cf = 0;
+
+		// check for all points between loc & loc+dloc
+		for (e=0; e<NE; e++){
+
+			// get edge positions (with translated edges)
+			ex0 = ex[e]-ecomx+0.5;
+			if (ex0 < 0)
+				ex0 += B[0];
+			else if (ex0 > B[0])
+				ex0 -= B[0];
+
+			// check for ex0 in x bin
+			if (ex0 > loc && ex0 <= loc+dloc){
+				// check if edge is occupied with biggest cluster
+				if (this->findroot(e)==this->get_pclus()){					
+					cf = 1;
+					break;
+				}	
+			}
+		}
+		if (cf == 1)
+			loc += dloc;			
+	}
+	if (cf == 1){
+		perc = 1;
+		percdir = "x";
+	}
+
+	// check percolation in Y direction (post-process)
+	if (perc == 0){
+		cf = 1;
+		loc = 0;
+		dloc = B[1]/subdiv;
+		while(cf == 1 && loc < B[1]-dloc){
+			cf = 0;
+
+			// check for all points between loc & loc+dloc
+			for (e=0; e<NE; e++){
+
+				// get edge positions (with translated edges)
+				ey0 = ey[e]-ecomy+0.5;
+				if (ey0 < 0)
+					ey0 += B[1];
+				else if (ey0 > B[1])
+					ey0 -= B[1];
+
+				// check for ex0 in x bin
+				if (ey0 > loc && ey0 <= loc+dloc){
+					// check if edge is occupied with biggest cluster
+					if (this->findroot(e)==this->get_pclus()){					
+						cf = 1;
+						break;
+					}	
+				}
+			}
+			if (cf == 1)
+				loc += dloc;			
+		}
+		if (cf == 1){
+			perc = 1;
+			percdir = "y";
+		}
+	}
+
+	// check percolation in Z direction (post-process)		
+	if (perc == 0){
+		cf = 1;
+		loc = 0;
+		dloc = B[2]/subdiv;
+		while(cf == 1 && loc < B[2]-dloc){
+			cf = 0;
+
+			// check for all points between loc & loc+dloc
+			for (e=0; e<NE; e++){
+
+				// get edge positions (with translated edges)
+				ez0 = ez[e]-ecomz+0.5;
+				if (ez0 < 0)
+					ez0 += B[2];
+				else if (ez0 > B[2])
+					ez0 -= B[2];
+
+				// check for ex0 in x bin
+				if (ez0 > loc && ez0 <= loc+dloc){
+					// check if edge is occupied with biggest cluster
+					if (this->findroot(e)==this->get_pclus()){					
+						cf = 1;
+						break;
+					}	
+				}
+			}
+			if (cf == 1)
+				loc += dloc;			
+		}
+		if (cf == 1){
+			perc = 1;
+			percdir = "z";
+		}
+	}
+
+	// set percolation value
+	this->set_perc(perc);
+}
 
 
 

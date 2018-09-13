@@ -45,6 +45,7 @@ private:
 	std::vector<double> ex;
 	std::vector<double> ey;
 	std::vector<double> ez;
+	double ecomx,ecomy,ecomz; 	// edge center of mass!
 
 	// edge neighbors, vertex map, list of particles
 	std::vector<int>* eneigh;
@@ -110,12 +111,15 @@ public:
 
 	// get edges
 	void get_edges();
-	void get_edge_neighbors(int e, int i, int j);
+	void get_edge_positions(int vi, int vj);
+	void get_edge_neighbors(int e, int vi, int vj);
 	void get_ep(int e, int i, int j);
 
 	// voronoi network edge percolation
-	void 
+	void voro_edge_perc(double epsilon, int seed, double aH, double aL);
 	void setup_edge_perc_lattice();
+	void set_lattice_midpoint_intersect();
+	void check_voro_percolation(std::string& str);
 
 	// get edge percolation
 
