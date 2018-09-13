@@ -46,6 +46,12 @@ voroperc::voroperc(int np) : voidcluster(np,1,3,6){
 		NFp[i] = 0;
 		vface[i] = nullptr;
 	}
+
+	// set other arrays to nullptr
+	vneigh = nullptr;
+	vp = nullptr;
+	eneigh = nullptr;
+	ep = nullptr;
 }
 
 
@@ -75,7 +81,6 @@ voroperc::~voroperc(){
 		vpy[i].clear();
 		vpz[i].clear();		
 	}
-	delete [] vneigh;
 	delete [] facen;
 	delete [] vface;
 	delete [] vpx;
@@ -94,11 +99,24 @@ voroperc::~voroperc(){
 	vmap.clear();
 
 	// delete v neighbor map
-	int nv = vn_map.size();
-	for (i=0; i<nv; i++){
+	for (i=0; i<NV; i++){
 		vn_map[i].clear();
+		delete [] eij[i];
+		vneigh[i].clear();
+		vp[i].clear();
 	}
 	vn_map.clear();
+	delete [] eij;
+	delete [] vneigh;
+	delete [] vp;
+
+	// delete edge objects
+	for (i=0; i<NE; i++){
+		eneigh[i].clear();
+		ep[i].clear();
+	}
+	delete [] eneigh;
+	delete [] ep;
 
 	// close stream objects
 	if (xyzobj.is_open())
@@ -235,21 +253,40 @@ void voroperc::get_voro(int printit){
 	// merge vertices based on faces
 	this->merge_vertices();
 	this->update_NV();
-
 	if (printit == 1){
 		cout << endl << endl;
 		this->print_global_vertices();
-
-		// print vn_map after vertex merge
-		for (i=0; i<NV; i++){
-			cout << "vn_map[" << i << "]: ";
-			for (j=0; j<vn_map[i].size(); j+=2)
-				cout << "(" << vn_map[i][j] << "," << vn_map[i][j+1] << ") ";
-			cout << ";";
-			cout << endl;
-		}	
 	}
 
+	// initialize vertex neighbor array, populate using vn_map	
+	this->update_vertex_neighbors();
+	if (printit == 1){
+		cout << endl << endl;
+		this->print_vertex_neighbors();
+
+		cout << "Printing vp: " << endl;
+		for (i=0; i<NV; i++){
+			cout << "vp[" << i << "] : ";
+			for (j=0; j<vp[i].size(); j++)
+				cout << setw(8) << vp[i][j];
+			cout << endl;
+		}
+	}
+
+	// get edge positions and neighbors based on vertex neighbors
+	this->get_edges();
+	if (printit == 1){
+		cout << endl << endl;
+		this->print_edge_neighbors();
+
+		cout << "Printing ep: " << endl;
+		for (i=0; i<NE; i++){
+			cout << "ep[" << i << "] : ";
+			for (j=0; j<ep[i].size(); j++)
+				cout << setw(8) << ep[i][j];
+			cout << endl;
+		}
+	}
 }
 
 
@@ -373,7 +410,6 @@ void voroperc::merge_vertices(){
 				this->add_vertex_neighbors(i,f);
 		}	
 	}
-
 }
 
 // auxilliary functions for merge_vertices
@@ -682,11 +718,9 @@ int voroperc::get_vtrue(int i, int vi){
 		// get total distance
 		dr = sqrt(dx*dx + dy*dy + dz*dz);
 
-		if (dr < mindist){			
-			cout << "** i = " << i << ", vi = " << vi << ", mindist = " << mindist << ", dr = " << dr;
+		if (dr < mindist){
 			mindist = dr;
 			vtrue = j;
-			cout << "; vtrue = " << vtrue << endl;
 		}
 	}
 
@@ -745,6 +779,263 @@ void voroperc::add_vertex_neighbors(int i, int f){
 		this->add_vertex_neighbors(vtrue,vj,i,f);
 	}
 }
+
+
+// UPDATE VERTEX NEIGHBOR FUNCTION
+void voroperc::update_vertex_neighbors(){
+	// intialize array vneigh
+	this->init_vneigh();
+
+	// initialize array vp
+	this->init_vp();
+
+	// local variables
+	int i,j,nv,cell,vertex,vtrue;
+	vector<int> vlist;
+
+	// loop over vn_map, turn face-frame vertices into global-frame vertices
+	for (i=0; i<NV; i++){
+		// loop over vertices connected to i	
+		vlist = vn_map[i];
+		nv = vlist.size();
+		for (j=0; j<nv; j+=2){
+			// get cell and vertex connected to i
+			cell = vlist[j];
+			vertex = vlist[j+1];
+
+			// get true vertex
+			vtrue = this->get_vtrue(cell,vertex);
+
+			// decide to add to vneigh or not
+			this->add_unique_to_vneigh(i,vtrue);
+
+			// decide to add to vp list or not
+			this->add_unique_to_vp(cell,vtrue);
+		}
+	}
+}
+
+void voroperc::add_unique_to_vneigh(int i, int vtrue){
+	int j,nv,skip;
+	nv = vneigh[i].size();
+
+	skip = 0;
+	if (nv == 0)
+		// if vneigh[i] empty, add vtrue
+		vneigh[i].push_back(vtrue);
+	else{
+		// check if vtrue already there
+		for (j=0; j<nv; j++){
+			if (vneigh[i][j] == vtrue){
+				skip = 1;
+				break;
+			}
+		}
+
+		// if skip = 0, add vtrue
+		if (skip == 0)
+			vneigh[i].push_back(vtrue);
+	}
+}
+
+void voroperc::add_unique_to_vp(int cell, int vtrue){
+	int j,np,skip;
+	np = vp[vtrue].size();
+
+	skip = 0;
+	if (np == 0)
+		// if vp[cell] empty, add vtrue
+		vp[vtrue].push_back(cell);
+	else{
+		// check if vtrue already there
+		for (j=0; j<np; j++){
+			if (vp[vtrue][j] == cell){
+				skip = 1;
+				break;
+			}
+		}
+
+		// if skip = 0, add vtrue
+		if (skip == 0)
+			vp[vtrue].push_back(cell);
+	}
+}
+
+
+// GET EDGE POSITIONS AND NEIGHBORS
+void voroperc::get_edges(){
+	int i,j,v,e,nvn;
+
+	// initialize edge def array
+	eij = new int*[NV];
+	for (i=0; i<NV; i++){
+		eij[i] = new int[NV];
+		for (j=0; j<NV; j++)
+			eij[i][j] = -1;
+	}
+
+	e = 0;
+	for (i=0; i<NV; i++){
+		// get number of vertex neighbors
+		nvn = vneigh[i].size();
+
+		// loop over neighbors
+		for (j=0; j<nvn; j++){
+			v = vneigh[i][j];		
+			if (v > i){
+				ex.push_back(0.5*(vx[i]+vx[j]));
+				ey.push_back(0.5*(vy[i]+vy[j]));
+				ez.push_back(0.5*(vz[i]+vz[j]));				
+				eij[i][v] = e;
+				eij[v][i] = e;
+				e++;
+			}
+		}
+	}
+
+	// get NE
+	NE = ex.size();
+	eneigh = new vector<int>[NE];	
+	ep = new vector<int>[NE];
+
+	// get edge neighbors
+	for (i=0; i<NV; i++){
+		nvn = vneigh[i].size();
+		for (j=0; j<nvn; j++){
+			v = vneigh[i][j];
+			if (v > i){
+				e = eij[i][v];
+				this->get_edge_neighbors(e,i,v);
+				this->get_ep(e,i,v);
+			}
+		}
+	}
+}
+
+void voroperc::get_edge_neighbors(int e, int i, int j){
+	int k,n;
+
+	// run over neighbors of i and j, get vertices, add to eneigh[e]
+	for (k=0; k<vneigh[i].size(); k++){
+		n = vneigh[i][k];
+		if (eij[i][n] != e)
+			eneigh[e].push_back(eij[i][n]);
+	}
+	for (k=0; k<vneigh[j].size(); k++){
+		n = vneigh[j][k];
+		if (eij[j][n] != e)
+			eneigh[e].push_back(eij[j][n]);
+	}
+}
+
+void voroperc::get_ep(int e, int i, int j){
+	int k,l,p1,p2;
+
+	// get the union of particles adjacent to vertices i and j
+	for (k=0; k<vp[i].size(); k++){
+		p1 = vp[i][k];
+		for (l=0; l<vp[j].size(); l++){
+			p2 = vp[j][l];
+			if (p2 == p1){
+				ep[e].push_back(p1);
+				break;
+			}
+		}
+	}
+
+}
+
+
+// LOOP OVER RADII, CHECK FOR PERCOLATION
+void voro_edge_perc(double epsilon, int seed, double aH, double aL){
+	// set lattice up for edge percolation
+	this->setup_edge_perc_lattice();
+
+	// local variables
+	int e;
+	int edgeoverlap = 0;
+
+	// bisection variables
+	double check,check_new,r;
+	int kmax;
+	k = 1;
+	int kk = 1;
+	kmax = 1e4;
+	check = 10*epsilon;
+	check_new = check;
+	r = 0.5*(aH+aL);
+
+	// perc check variables
+	int cf = 1;
+	double subdiv = 10.0;
+	double loc,dloc;
+	int perc = 0;
+	string percdir = "NA";
+
+	// output information to console
+	int w = 15;
+	int prc = 5;
+	double poro; 
+	cout << setw(w) << "k";
+	cout << setw(w) << "r";
+	cout << setw(w) << "aH";
+	cout << setw(w) << "aL";
+	cout << setw(w) << "check";
+	cout << setw(w) << "~poro";
+	cout << setw(w) << "perc";
+	cout << setw(w) << "dir";
+	cout << setw(w) << "cnum";
+	cout << setw(w) << "smax";
+	cout << setw(w) << "lsites";
+	cout << setw(w) << "fcalls";
+	cout << endl;
+	for (int s=0; s<12*w; s++)
+		cout << "=";
+	cout << endl;
+
+	cout << "Looping over sphere radii, looking for edge percolation" << endl;
+	while( ((check < epsilon) || perc == 0) && k < kmax ){
+		check = r;
+
+		this->set_radius(r);
+		this->reset_sys();
+		this->reset_ptr();
+		percdir = "NA";
+
+		// check intersection by edge midpoint
+		this->check_midpoint_intersect();
+
+		// check point of closest approach intersection
+		// NOTE: NEED TO CALCULATE CPA FIRST!
+		// this->check_cpa_intersect();
+	}
+}
+
+
+// SET LATTICE UP FOR EDGE PERCOLATION
+void voroperc::setup_edge_perc_lattice(){
+	// local variables
+	int e,f,enn;
+
+	// Reset lattice with total number of edges
+	cout << "resetting percolation lattice with NE = " << NE << " edges..." << endl;
+ 	this->reset_lattice(NE);
+
+ 	// Get nearest neighbor info for each lattice
+ 	cout << "getting nearest neighbor info..." << endl;
+ 	for (e=0; e<NE; e++){
+ 		enn = eneigh[e].size();
+ 		this->initialize_nn(e,enn);
+ 		for (f=0; f<enn; f++)
+ 			this->set_nn(e,f,eneigh[e][f]);
+ 	}
+}
+
+
+
+
+// POPULATE LATTICE
+
 
 
 
@@ -877,8 +1168,33 @@ void voroperc::print_global_vertices(){
 	cout << endl << endl;
 }
 
+// Print vertex neighbor info
+void voroperc::print_vertex_neighbors(){
+	int i,j,nv;
 
+	cout << "Printing vertex neighbors" << endl;
+	for (i=0; i<NV; i++){
+		cout << "vertex i = " << i << " neighbors : ";
+		nv = vneigh[i].size();
+		for (j=0; j<nv; j++)
+			cout << setw(8) << vneigh[i][j];
+		cout << endl;
+	}
+	cout << endl << endl;
+}
 
+void voroperc::print_edge_neighbors(){
+	int i,j,ne;
+
+	for (i=0; i<NE; i++){
+		cout << "edge i = " << i << " neighbors : ";
+		ne = eneigh[i].size();
+		for (j=0; j<ne; j++)
+			cout << setw(8) << eneigh[i][j];
+		cout << endl;
+	}
+	cout << endl << endl;
+}
 
 
 

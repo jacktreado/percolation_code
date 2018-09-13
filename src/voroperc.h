@@ -39,11 +39,18 @@ private:
 	std::vector<double> vx;
 	std::vector<double> vy;
 	std::vector<double> vz;
+	std::vector<int>* vp; 		// list of particles associated with each vertex
 
 	// edge positions in global coordinate system
 	std::vector<double> ex;
 	std::vector<double> ey;
 	std::vector<double> ez;
+
+	// edge neighbors, vertex map, list of particles
+	std::vector<int>* eneigh;
+	int** eij;
+	std::vector<int>* ep;
+
 
 	// point of closest approach in global coordinate system
 	std::vector<double> cpax;
@@ -74,6 +81,8 @@ public:
 	void init_NEp(int val) { if (NEp == nullptr) {NEp = new int[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
 	void init_NFp(int val) { if (NFp == nullptr) {NFp = new int[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
 	void init_vface(int id, int val) { if (vface[id] == nullptr) {vface[id] = new std::vector<int>[val];} else {cout << "cannot init, not nullptr\n"; throw;} };
+	void init_vneigh() { if (vneigh == nullptr) {vneigh = new std::vector<int>[NV];} else {cout << "cannot init, not nullptr\n"; throw;} };
+	void init_vp() { if (vp == nullptr) {vp = new std::vector<int>[NV];} else {cout << "cannot init, not nullptr\n"; throw;} };
 
 	// get voronoi vertex information
 	void get_voro(int printit);
@@ -94,7 +103,19 @@ public:
 	void add_vertex_neighbors(int vtrue, int vi, int i, int f);
 	void add_vertex_neighbors(int i, int f);
 
-	// setup lattice for percolation
+	// use info from vertex merge to create connectivity list (vneigh)
+	void update_vertex_neighbors();
+	void add_unique_to_vneigh(int i, int vtrue);
+	void add_unique_to_vp(int i, int vtrue);
+
+	// get edges
+	void get_edges();
+	void get_edge_neighbors(int e, int i, int j);
+	void get_ep(int e, int i, int j);
+
+	// voronoi network edge percolation
+	void 
+	void setup_edge_perc_lattice();
 
 	// get edge percolation
 
@@ -110,6 +131,8 @@ public:
 	void print_vertices_xyz(int id, voro::voronoicell_neighbor& c);
 	void print_face_vectors();
 	void print_global_vertices();
+	void print_vertex_neighbors();
+	void print_edge_neighbors();
 };
 
 

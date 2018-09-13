@@ -11,7 +11,7 @@ using namespace std;
 
 int main(){
 	// initialize the only two important parameters
-	int N = 10;
+	int N = 20;
 	int seed = 1;
 	string xyzstr = "voro_perc.xyz";
 
@@ -22,8 +22,13 @@ int main(){
 	// initialize spheres with random positions
 	vpo.rand_sphere_pos(seed);
 
-	// get voronoi, output v cell information
+	// get voronoi network (vertices & edges in global frame)
 	vpo.get_voro(1);
+
+	// setup lattice for edge percolation
+	vpo.setup_edge_perc_lattice();
+
+	// 
 
 	// that's all folks
 	return 0;
