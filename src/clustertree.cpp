@@ -189,7 +189,7 @@ long long int clustertree::get_lattice_sum(){
 
 void clustertree::reset_sys(){
 	// reset list s
-	s.erase(s.begin(),s.end());
+	s.clear();
 
 	// reset stats
 	smax = 0;
@@ -965,7 +965,6 @@ void clustertree::post_process_voro(){
 		smax = 0;
 	}
 }
-
 
 void clustertree::post_process(){
 	// get number of root clusters at least > L in 

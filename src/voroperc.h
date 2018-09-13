@@ -86,7 +86,7 @@ public:
 	void init_vp() { if (vp == nullptr) {vp = new std::vector<int>[NV];} else {cout << "cannot init, not nullptr\n"; throw;} };
 
 	// get voronoi vertex information
-	void get_voro(int printit);
+	void get_voro();
 	void store_particle_vertices(int id, std::vector<double>& v);
 	void store_face_neighbors(int id, std::vector<int>& neigh);
 	void store_face_vertices(int id, std::vector<int>& f_vert);
@@ -114,14 +114,21 @@ public:
 	void get_edge_positions(int vi, int vj);
 	void get_edge_neighbors(int e, int vi, int vj);
 	void get_ep(int e, int i, int j);
+	int get_edge_v1(int e);
+	int get_edge_v2(int e);
+	void get_edge_vertices(int e, int& v1, int& v2);
+	void get_cpa();
+	void get_particle_positions(int e, std::vector<double>& p0, std::vector<double>& p1, std::vector<double>& p2);
 
 	// voronoi network edge percolation
 	void voro_edge_perc(double epsilon, int seed, double aH, double aL);
 	void setup_edge_perc_lattice();
 	void set_lattice_midpoint_intersect();
+	void set_lattice_cpa_intersect();
 	void check_voro_percolation(std::string& str);
-
-	// get edge percolation
+	int check_voro_perc_x(std::string& percdir);
+	int check_voro_perc_y(std::string& percdir);
+	int check_voro_perc_z(std::string& percdir);
 
 	// print information: lattice, network, xyz
 	void open_xyz(std::string& str){
@@ -133,6 +140,8 @@ public:
 		}
 	}
 	void print_vertices_xyz(int id, voro::voronoicell_neighbor& c);
+	void print_edge_intersects_xyz(int e, int v0, int v1, vector<double>& p0, vector<double>& p1, vector<double>& p2);
+	void print_perc_cluster_xyz();
 	void print_face_vectors();
 	void print_global_vertices();
 	void print_vertex_neighbors();

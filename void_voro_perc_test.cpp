@@ -11,7 +11,7 @@ using namespace std;
 
 int main(){
 	// initialize the only two important parameters
-	int N = 20;
+	int N = 500;
 	int seed = 1;
 	string xyzstr = "voro_perc.xyz";
 
@@ -23,7 +23,7 @@ int main(){
 	vpo.rand_sphere_pos(seed);
 
 	// get voronoi network (vertices & edges in global frame)
-	vpo.get_voro(1);
+	vpo.get_voro();
 
 	// find percolation
 	double epsilon = 1e-6;
