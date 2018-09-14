@@ -50,6 +50,7 @@ private:
 	// edge neighbors, vertex map, list of particles
 	std::vector<int>* eneigh;
 	int** eij;
+	std::vector<int>* ev;
 	std::vector<int>* ep;
 
 

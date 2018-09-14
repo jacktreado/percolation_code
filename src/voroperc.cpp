@@ -52,6 +52,7 @@ voroperc::voroperc(int np) : voidcluster(np,1,3,6){
 	vp = nullptr;
 	eneigh = nullptr;
 	ep = nullptr;
+	ev = nullptr;
 }
 
 
@@ -114,9 +115,11 @@ voroperc::~voroperc(){
 	for (i=0; i<NE; i++){
 		eneigh[i].clear();
 		ep[i].clear();
+		ev[i].clear();
 	}
 	delete [] eneigh;
 	delete [] ep;
+	delete [] ev;
 
 	// close stream objects
 	if (xyzobj.is_open())
@@ -907,6 +910,7 @@ void voroperc::get_edges(){
 				this->get_edge_positions(i,v);
 				eij[i][v] = e;
 				eij[v][i] = e;
+
 				e++;
 			}
 		}
@@ -916,6 +920,7 @@ void voroperc::get_edges(){
 	NE = ex.size();
 	eneigh = new vector<int>[NE];	
 	ep = new vector<int>[NE];
+	ev = new vector<int>[NE];
 
 	// get edge neighbors
 	for (i=0; i<NV; i++){
@@ -926,6 +931,11 @@ void voroperc::get_edges(){
 				e = eij[i][v];
 				this->get_edge_neighbors(e,i,v);
 				this->get_ep(e,i,v);
+
+				// save vertices attached to each edge
+				ev[e].resize(2);
+				ev[e][0] = i;
+				ev[e][1] = v;
 			}
 		}
 	}
@@ -1006,54 +1016,16 @@ void voroperc::get_ep(int e, int i, int j){
 }
 
 int voroperc::get_edge_v1(int e){
-	int i,j;
-	for (i=0; i<NV; i++){
-		for (j=0; j<NV; j++){
-			if(eij[i][j] == e)
-				return i;
-		}
-	}
-
-	// if you get this far there is a problem
-	cout << "ERROR: edge e = " << e << " not found when checking eij, check eij and e again..." << endl;
-	throw;
+	return ev[e][0];
 }
 
 int voroperc::get_edge_v2(int e){
-	int i,j;
-	for (i=0; i<NV; i++){
-		for (j=0; j<NV; j++){
-			if(eij[i][j] == e)
-				return j;
-		}
-	}
-
-	// if you get this far there is a problem
-	cout << "ERROR: edge e = " << e << " not found when checking eij, check eij and e again..." << endl;
-	throw;
+	return ev[e][1];
 }
 
 void voroperc::get_edge_vertices(int e, int& v1, int& v2){
-	int i,j,vf;
-
-	vf = 0;
-	for (i=0; i<NV; i++){
-		for (j=0; j<NV; j++){
-			if(eij[i][j] == e){
-				v1 = i;
-				v2 = j;
-				vf = 1;
-				break;
-			}
-		}
-		if (vf==1)
-			break;
-	}
-
-	if (vf == 0){
-		cout << "ERROR: edge e = " << e << " not found when checking eij, check eij and e again..." << endl;
-		throw;
-	}
+	v1 = ev[e][0];
+	v2 = ev[e][1];
 }
 
 
@@ -1251,22 +1223,6 @@ void voroperc::get_particle_positions(int e, vector<double>& p0, vector<double>&
 		
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
