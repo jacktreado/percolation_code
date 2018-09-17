@@ -87,6 +87,7 @@ public:
 	void init_vp() { if (vp == nullptr) {vp = new std::vector<int>[NV];} else {cout << "cannot init, not nullptr\n"; throw;} };
 
 	// get voronoi vertex information
+	void process_vpp();
 	void get_voro();
 	void store_particle_vertices(int id, std::vector<double>& v);
 	void store_face_neighbors(int id, std::vector<int>& neigh);

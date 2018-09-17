@@ -169,13 +169,7 @@ void output_vpp_stats(voronoicell_neighbor& v, double x, double y, double z){
 		   "Centroid vector     : (%g,%g,%g)\n",v.volume(),x,y,z);
 }
 
-void voroperc::get_voro(){
-	cout << "IN get_voro()..." << endl;
-
-	// get variables from clustertree
-	int NDIM;
-	NDIM = this->get_NDIM();
-
+void voroperc::process_vpp(){
 	// print info
 	int printit = 0;
 	if (xyzobj.is_open())
@@ -260,6 +254,21 @@ void voroperc::get_voro(){
 		cout << endl << endl;
 		this->print_face_vectors();
 	}
+}
+
+void voroperc::get_voro(){
+	cout << "IN get_voro()..." << endl;
+
+	// local variables
+	int i,j;
+
+	// print info
+	int printit = 0;
+	if (xyzobj.is_open())
+		printit = 1;
+
+	cout << "** processing voro++" << endl;
+	this->process_vpp();
 
 	// merge vertices based on faces
 	cout << "** merging vertices" << endl;
