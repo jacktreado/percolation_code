@@ -79,6 +79,8 @@ public:
 	long long int findroot(long long int i, int &kf);				// finds root, keeps track of function calls
 	void merge_clusters();						// merge clusters
 	void merge_clusters(vector<int>& NNNvec);
+	void merge_clusters_edge_perc(vector<int>& NNNvec,vector<int> ev_0[], vector<double>& vx_0, 
+		vector<double>& vy_0, vector<double>& vz_0, double B_0[]);
 	void post_process();						// check percolation, get cluster stats
 	void post_process_voro();
 	int perc_search_XY();

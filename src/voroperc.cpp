@@ -1246,7 +1246,8 @@ void voroperc::voro_edge_perc(double epsilon, int seed, double aH, double aL){
 	check = 10*epsilon;
 	check_new = check;
 	r = 0.5*(aH+aL);
-	int perc = 0;
+	int perc,perc1,perc2;
+	perc = 0;
 	string percdir = "NA";
 
 	// get vector edge_nn, for cluster merging
@@ -1294,9 +1295,16 @@ void voroperc::voro_edge_perc(double epsilon, int seed, double aH, double aL){
 		this->set_lattice_cpa_intersect();
 
 		// merge clusters		
-		this->merge_clusters(edge_nn);
+		this->merge_clusters_edge_perc(edge_nn,ev,vx,vy,vz,B);
+		// this->merge_clusters(edge_nn);	
+		perc1 = this->get_perc();	
 		this->post_process_voro();
 		this->check_voro_percolation(percdir);
+		perc2 = this->get_perc();
+		if (perc1 == 1 && perc2 == 1)
+			perc = 1;
+		else
+			perc = 0;
 
 		// print info to console		
 		poro = exp(-NP*(1.33333333333)*PI*pow(r,NDIM));
@@ -1305,8 +1313,7 @@ void voroperc::voro_edge_perc(double epsilon, int seed, double aH, double aL){
 		cout << setprecision(prc) << setw(w) << aH;
 		cout << setprecision(prc) << setw(w) << aL;
 
-		// update check based on perc or not
-		perc = this->get_perc();
+		// update check based on perc or not		
 		if (perc == 1)
 			aL = r;
 		else
@@ -1329,8 +1336,8 @@ void voroperc::voro_edge_perc(double epsilon, int seed, double aH, double aL){
 		cout << setprecision(prc) << setw(w) << this->get_fcalls();
 		cout << endl;
 
-		// if (xyzobj.is_open())
-			// this->print_perc_cluster_xyz();
+		if (xyzobj.is_open())
+			this->print_perc_cluster_xyz();
 	}
 	// if converged, end
 	if (k < kmax && check < epsilon){
@@ -1478,7 +1485,7 @@ int voroperc::check_voro_perc_x(string& percdir){
 	// check percolation in X direction
 	perc = 0;
 	cf = 1;
-	subdiv = 10.0;
+	subdiv = 20.0;
 	loc0 = -2*B[0];
 	loc1 = 0;
 	loc = 0;
@@ -1514,7 +1521,7 @@ int voroperc::check_voro_perc_x(string& percdir){
 
 			// check for ex0 in x bin
 			if (ex[e] > loc0 && ex[e] <= loc1){
-				// check if edge is occupied with biggest cluster
+				// check if edge is occupied with biggest cluster && 
 				if (this->findroot(e)==pclus){					
 					cf = 1;
 					break;
@@ -1541,7 +1548,7 @@ int voroperc::check_voro_perc_y(string& percdir){
 	// check percolation in X direction
 	perc = 0;
 	cf = 1;
-	subdiv = 10.0;
+	subdiv = 20.0;
 	loc = 0;
 	dloc = B[1]/subdiv;
 	pclus = this->get_pclus();
@@ -1602,7 +1609,7 @@ int voroperc::check_voro_perc_z(string& percdir){
 	// check percolation in X direction
 	perc = 0;
 	cf = 1;
-	subdiv = 10.0;
+	subdiv = 20.0;
 	loc = 0;
 	dloc = B[2]/subdiv;
 	pclus = this->get_pclus();
@@ -1746,7 +1753,10 @@ void voroperc::print_perc_cluster_xyz(){
 			xyzobj << setw(w) << ex[e];
 			xyzobj << setw(w) << ey[e];
 			xyzobj << setw(w) << ez[e];
-			xyzobj << setw(w) << a;
+			if (e==pclus)
+				xyzobj << setw(w) << 2*a;
+			else
+				xyzobj << setw(w) << a;
 			xyzobj << endl;
 
 			if (vcheck[v1] == 0){
