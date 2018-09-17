@@ -126,6 +126,7 @@ voroperc::~voroperc(){
 		xyzobj.close();
 }
 
+ 
 
 // Voronoi vertex access
 void output_vpp_stats(voronoicell_neighbor& v, double x, double y, double z){
@@ -239,9 +240,6 @@ void voroperc::process_vpp(){
 			cout << endl;
 			output_vpp_stats(c,x,y,z);
 			cout << endl << endl;
-
-			// if (xyzobj.is_open())
-				// this->print_vertices_xyz(id,c);
 		}
 
 		// store particle vertex/face information
@@ -269,6 +267,8 @@ void voroperc::get_voro(){
 
 	cout << "** processing voro++" << endl;
 	this->process_vpp();
+	if (printit == 1)
+		this->print_vertices_xyz();
 
 	// merge vertices based on faces
 	cout << "** merging vertices" << endl;
@@ -307,6 +307,14 @@ void voroperc::get_voro(){
 			cout << "ep[" << i << "] : ";
 			for (j=0; j<ep[i].size(); j++)
 				cout << setw(8) << ep[i][j];
+			cout << endl;
+		}
+
+		cout << "Printing ev: " << endl;
+		for (i=0; i<NE; i++){
+			cout << "ev[" << i << "] : ";
+			for (j=0; j<ev[i].size(); j++)
+				cout << setw(8) << ev[i][j];
 			cout << endl;
 		}
 	}
@@ -757,7 +765,7 @@ int voroperc::get_vtrue(int i, int vi){
 		// cout << "ERROR: true vertex not found for i = " << i << ", vi = " << vi << "; check that it exists." << endl;
 		return -1;
 	}
-	else if (mindist > 1e-14){
+	else if (mindist > 1e-8){
 		// cout << "ERROR: true vertex not very close to to i = " << i << ", vi = " << vi << "; mindist = " << mindist << endl;
 		return -1;
 	}
@@ -769,6 +777,11 @@ int voroperc::get_vtrue(int i, int vi){
 void voroperc::add_vertex_neighbors(int vtrue, int vi, int i, int f){
 	// local variables
 	int j,nfv,fwd,bwd,vfwd,vbwd;
+
+	if (vtrue == -1){
+		cout << "vtrue = -1 in add_vertex_neighbors(), ending..." << endl;
+		throw;
+	}
 
 	// loop over face (i,f), add neighbors of vi on (i,f)
 	// to vn_map[vtrue]
@@ -1044,6 +1057,7 @@ void voroperc::get_cpa(){
 	int NDIM = this->get_NDIM();
 	int e,d,ne,v0,v1;
 	double nmag,lnmag,d1,d2,dv1,dv2,dval;
+	double dv2x,dv2y,dv2z;
 
 	// particle position vectors
 	vector<double> p0(NDIM);
@@ -1116,7 +1130,16 @@ void voroperc::get_cpa(){
 		else{
 			// measure distance to both vertices
 			dv1 = sqrt(pow(pint[0]-vx[v0],2) + pow(pint[1]-vy[v0],2) + pow(pint[2]-vz[v0],2));
-			dv2 = sqrt(pow(pint[0]-vx[v1],2) + pow(pint[1]-vy[v1],2) + pow(pint[2]-vz[v1],2));
+			// dv2 = sqrt(pow(pint[0]-vx[v1],2) + pow(pint[1]-vy[v1],2) + pow(pint[2]-vz[v1],2));
+
+			dv2x = pint[0]-vx[v1];
+			dv2x = dv2x - B[0]*round(dv2x/B[0]);
+			dv2y = pint[1]-vy[v1];
+			dv2y = dv2y - B[1]*round(dv2y/B[1]);
+			dv2z = pint[2]-vz[v1];
+			dv2z = dv2z - B[2]*round(dv2z/B[2]);
+			dv2 = sqrt(dv2x*dv2x + dv2y*dv2y + dv2z*dv2z);
+
 			if (dv1 > dv2){
 				cpax[e] = ex[e]-lnmag*ln[0];
 				cpay[e] = ey[e]-lnmag*ln[1];
@@ -1129,12 +1152,22 @@ void voroperc::get_cpa(){
 			}				
 		}
 
-		// if (xyzobj.is_open()){
-		// 	this->print_edge_intersects_xyz(e,v0,v1,p0,p1,p2);		
-		// }
+		if (xyzobj.is_open()){
+			this->print_edge_intersects_xyz(e,v0,v1,p0,p1,p2,pint);		
+		}
 		if (1-abs(d2) > 1e-2){
-			cout << "ERROR: edge " << e << " not perpendicular to plane, throwing error..." << endl;			
+			cout << "ERROR: edge " << e << " not perpendicular to plane, d2 = " << d2 << ". throwing error..." << endl;		
+			cout << "adjacent to particles " << ep[e][0] << ", " << ep[e][1] << ", " << ep[e][2] << endl;	
 			throw "non-perpendicular edge-plane found!";
+		}
+		if (ep[e].size() != 3){
+			cout << "ERROR (from get_cpa): edge " << e << " does not have 3 particles, has " << ep[e].size() << " instead, check ep[e]..." << endl;
+			cout << "ep[" << e << "] = ";
+			for (d=0; d<ep[e].size(); d++){
+				cout << ep[e][d] << ", ";
+			}
+			cout << endl << endl;
+			throw;
 		}
 	}
 }
@@ -1144,8 +1177,13 @@ void voroperc::get_particle_positions(int e, vector<double>& p0, vector<double>&
 	int d,l0,l1,l2;
 
 	// get particle labels
-	if (ep[e].size() != 3){
-		cout << "ERROR: edge " << e << "does not have 3 particles, has " << ep[e].size() << " instead, check ep[e]..." << endl;
+	if (ep[e].size() < 3){
+		cout << "ERROR: edge " << e << " has < 3 particles, i.e. has " << ep[e].size() << " neighboring particles instead, check ep[e]..." << endl;
+		cout << "ep[" << e << "] = ";
+		for (d=0; d<ep[e].size(); d++){
+			cout << ep[e][d] << ", ";
+		}
+		cout << endl << endl;
 		throw;
 	}
 	else{
@@ -1682,33 +1720,33 @@ int voroperc::check_voro_perc_z(string& percdir){
 
 
 // Print system to xyz
-void voroperc::print_vertices_xyz(int id, voronoicell_neighbor& c){
-	int i,d,w;
+void voroperc::print_vertices_xyz(){
+	int i,j,d,w;
 	int NDIM = this->get_NDIM();
-	vector<double> v;
 	w = 16;
 
-	// get vertex positions for cell id
-	c.vertices(pos[id][0],pos[id][1],pos[id][2],v);
-
-	// print info to xyz string
-	xyzobj << NVp[id] << endl;
-	xyzobj << "Lattice=\"" << B[0] << " 0.0 0.0";
-	xyzobj << " 0.0 " << B[1] << " 0.0";
-	xyzobj << " 0.0 0.0 " << B[2] << "\"";
-	xyzobj << '\t';
-	xyzobj << "Properties=species:S:1:pos:R:3:radius:R:1" << endl;
-	for (i=0; i<NVp[id]; i++){
-		xyzobj << "Type_" << id;
-		for (d=0; d<NDIM; d++)
-			xyzobj << setw(w) << v.at(NDIM*i+d);
-		xyzobj << setw(w) << 0.01;
-		xyzobj << endl;
-	}
+	for (i=0; i<NP; i++){
+		// print info to xyz string
+		xyzobj << vpx[i].size()+1 << endl;
+		xyzobj << "Lattice=\"" << B[0] << " 0.0 0.0";
+		xyzobj << " 0.0 " << B[1] << " 0.0";
+		xyzobj << " 0.0 0.0 " << B[2] << "\"";
+		xyzobj << '\t';
+		xyzobj << "Properties=species:S:1:pos:R:3:radius:R:1" << endl;
+		xyzobj << "N" << setw(w) << pos[i][0] << setw(w) << pos[i][1] << setw(w) << pos[i][2] << setw(w) << 0.03 << endl;
+		for (j=0; j<NVp[i]; j++){
+			xyzobj << "C";
+			xyzobj << setw(w) << vpx[i][j];
+			xyzobj << setw(w) << vpy[i][j];
+			xyzobj << setw(w) << vpz[i][j];
+			xyzobj << setw(w) << 0.01;
+			xyzobj << endl;
+		}
+	}	
 }
 
-void voroperc::print_edge_intersects_xyz(int e, int v0, int v1, vector<double>& p0, vector<double>& p1, vector<double>& p2){
-	xyzobj << 10 << endl;
+void voroperc::print_edge_intersects_xyz(int e, int v0, int v1, vector<double>& p0, vector<double>& p1, vector<double>& p2, vector<double>& pint){
+	xyzobj << 11 << endl;
 	xyzobj << "Lattice=\"" << B[0] << " 0.0 0.0";
 	xyzobj << " 0.0 " << B[1] << " 0.0";
 	xyzobj << " 0.0 0.0 " << B[2] << "\"";
@@ -1724,6 +1762,7 @@ void voroperc::print_edge_intersects_xyz(int e, int v0, int v1, vector<double>& 
 	xyzobj << "S" << setw(16) << vx[v1] << setw(16) << vy[v1] << setw(16) << vz[v1] << setw(16) << 0.02 << endl;
 	xyzobj << "H" << setw(16) << ex[e] << setw(16) << ey[e] << setw(16) << ez[e] << setw(16) << 0.02 << endl;
 	xyzobj << "N" << setw(16) << cpax[e] << setw(16) << cpay[e] << setw(16) << cpaz[e] << setw(16) << 0.02 << endl;
+	xyzobj << "B" << setw(16) << pint[0] << setw(16) << pint[1] << setw(16) << pint[2] << setw(16) << 0.01 << endl;
 }
 
 void voroperc::print_perc_cluster_xyz(){

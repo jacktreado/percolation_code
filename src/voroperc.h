@@ -141,8 +141,8 @@ public:
 			throw;
 		}
 	}
-	void print_vertices_xyz(int id, voro::voronoicell_neighbor& c);
-	void print_edge_intersects_xyz(int e, int v0, int v1, vector<double>& p0, vector<double>& p1, vector<double>& p2);
+	void print_vertices_xyz();
+	void print_edge_intersects_xyz(int e, int v0, int v1, vector<double>& p0, vector<double>& p1, vector<double>& p2, vector<double>& pint);
 	void print_perc_cluster_xyz();
 	void print_face_vectors();
 	void print_global_vertices();
