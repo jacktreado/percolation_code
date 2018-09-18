@@ -65,6 +65,7 @@ public:
 	// constructors & destructors
 	voroperc(int np);
 	~voroperc();
+	void delete_vpp_vars();
 
 	// getters
 	int get_NV(){ return NV; };

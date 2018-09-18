@@ -71,42 +71,18 @@ voroperc::~voroperc(){
 	cpay.clear();
 	cpaz.clear();
 	
-	// delete vector arrays
+	// delete arrays
 	int i,f;
-	for (i=0; i<NP; i++){
-		facen[i].clear();
-		for (f=0; f<NFp[i]; f++)
-			vface[i][f].clear();
-		delete [] vface[i];
-		vpx[i].clear();
-		vpy[i].clear();
-		vpz[i].clear();		
-	}
-	delete [] facen;
-	delete [] vface;
-	delete [] vpx;
-	delete [] vpy;
-	delete [] vpz;
 	delete [] NVp;
 	delete [] NEp;
 	delete [] NFp;
 
-	// delete face pair map
-	int nfp = vmap.size();
-	for (i=0; i<nfp; i++){
-		delete [] vmap[i];
-		vmap[i] = nullptr;
-	}
-	vmap.clear();
-
-	// delete v neighbor map
+	// delete v neighbor info
 	for (i=0; i<NV; i++){
-		vn_map[i].clear();
 		delete [] eij[i];
 		vneigh[i].clear();
 		vp[i].clear();
 	}
-	vn_map.clear();
 	delete [] eij;
 	delete [] vneigh;
 	delete [] vp;
@@ -124,6 +100,39 @@ voroperc::~voroperc(){
 	// close stream objects
 	if (xyzobj.is_open())
 		xyzobj.close();
+}
+
+// delete voro++ entities
+void voroperc::delete_vpp_vars(){
+	// delete vector arrays
+	int i,f;
+	for (i=0; i<NP; i++){
+		facen[i].clear();
+		for (f=0; f<NFp[i]; f++)
+			vface[i][f].clear();
+		delete [] vface[i];
+		vpx[i].clear();
+		vpy[i].clear();
+		vpz[i].clear();		
+	}
+	delete [] facen;
+	delete [] vface;
+	delete [] vpx;
+	delete [] vpy;
+	delete [] vpz;
+
+	// delete face pair map
+	int nfp = vmap.size();
+	for (i=0; i<nfp; i++){
+		delete [] vmap[i];
+		vmap[i] = nullptr;
+	}
+	vmap.clear();
+
+	// delete vector maps
+	for (i=0; i<NV; i++){
+		vn_map[i].clear();
+	}
 }
 
  
@@ -294,6 +303,9 @@ void voroperc::get_voro(){
 			cout << endl;
 		}
 	}
+
+	// can delete face-based information
+	this->delete_vpp_vars();
 
 	// get edge positions and neighbors based on vertex neighbors
 	cout << "** getting edges" << endl;
