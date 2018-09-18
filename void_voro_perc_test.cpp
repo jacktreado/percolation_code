@@ -11,8 +11,8 @@ using namespace std;
 
 int main(){
 	// initialize the only two important parameters
-	int N = 200;
-	int seed = 244;
+	int N = 1000;
+	int seed = 2;
 	string xyzstr = "voro_perc.xyz";
 
 	// instantiate object

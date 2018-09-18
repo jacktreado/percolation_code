@@ -771,9 +771,9 @@ void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec,vector<int> ev_0[
 						
 						
 						// if difference in displacements to root is greater than PBC distance, percolated!
-						if (dv > d && dr1 > 0.5*B_0[0] && dr2 > 0.5*B_0[0]){
+						if (dv > d){
 							cout << "** in merge_clusters, found perc across box!" << endl;
-							cout << "** dr1 = " << dr1 << ", dr2 = " << dr2 << endl;
+							// cout << "** dr1 = " << dr1 << ", dr2 = " << dr2 << endl;
 							perc = 1;
 						}
 					}

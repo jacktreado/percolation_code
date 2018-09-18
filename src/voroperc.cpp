@@ -1515,9 +1515,9 @@ void voroperc::check_voro_percolation(string& percdir){
 
 	// check x,y,z
 	perc = this->check_voro_perc_x(percdir);
-	if (perc == 0)
+	if (perc == 1)
 		perc = this->check_voro_perc_y(percdir);
-	if (perc == 0)
+	if (perc == 1)
 		perc = this->check_voro_perc_z(percdir);
 
 	// set percolation value
@@ -1556,7 +1556,7 @@ int voroperc::check_voro_perc_x(string& percdir){
 				loc1 = loc+dloc;
 			}
 			// if loc is close to box edge, check from edge to +inf
-			else if (loc >= B[0]-dloc-1e-8){
+			else if (loc >= B[0]-1e-8){
 				loc0 = loc;
 				loc1 = loc+10*B[0];
 				boxedge = 1;
@@ -1592,10 +1592,12 @@ int voroperc::check_voro_perc_y(string& percdir){
 	int e,perc,pclus,boxedge,cf;
 	double loc,loc0,loc1,dloc,subdiv;
 
-	// check percolation in X direction
+	// check percolation in Y direction
 	perc = 0;
 	cf = 1;
 	subdiv = 20.0;
+	loc0 = -2*B[1];
+	loc1 = 0;
 	loc = 0;
 	dloc = B[1]/subdiv;
 	pclus = this->get_pclus();
@@ -1617,7 +1619,7 @@ int voroperc::check_voro_perc_y(string& percdir){
 				loc1 = loc+dloc;
 			}
 			// if loc is close to box edge, check from edge to +inf
-			else if (loc >= B[1]-dloc-1e-8){
+			else if (loc >= B[1]-1e-8){
 				loc0 = loc;
 				loc1 = loc+10*B[1];
 				boxedge = 1;
@@ -1627,9 +1629,9 @@ int voroperc::check_voro_perc_y(string& percdir){
 				loc1 = loc+dloc;
 			}
 
-			// check for ey in y bin
+			// check for ex0 in x bin
 			if (ey[e] > loc0 && ey[e] <= loc1){
-				// check if edge is occupied with biggest cluster
+				// check if edge is occupied with biggest cluster && 
 				if (this->findroot(e)==pclus){					
 					cf = 1;
 					break;
@@ -1653,10 +1655,12 @@ int voroperc::check_voro_perc_z(string& percdir){
 	int e,perc,pclus,boxedge,cf;
 	double loc,loc0,loc1,dloc,subdiv;
 
-	// check percolation in X direction
+	// check percolation in Y direction
 	perc = 0;
 	cf = 1;
 	subdiv = 20.0;
+	loc0 = -2*B[2];
+	loc1 = 0;
 	loc = 0;
 	dloc = B[2]/subdiv;
 	pclus = this->get_pclus();
@@ -1678,7 +1682,7 @@ int voroperc::check_voro_perc_z(string& percdir){
 				loc1 = loc+dloc;
 			}
 			// if loc is close to box edge, check from edge to +inf
-			else if (loc >= B[2]-dloc-1e-8){
+			else if (loc >= B[2]-1e-8){
 				loc0 = loc;
 				loc1 = loc+10*B[2];
 				boxedge = 1;
@@ -1688,12 +1692,10 @@ int voroperc::check_voro_perc_z(string& percdir){
 				loc1 = loc+dloc;
 			}
 
-
-			// check for ez in z bin
+			// check for ex0 in x bin
 			if (ez[e] > loc0 && ez[e] <= loc1){
-				// check if edge is occupied with biggest cluster
-				if (this->findroot(e)==pclus){
-					// cout << "** pclus found with edge = " << e << " at ez = " << ez[e] << endl;				
+				// check if edge is occupied with biggest cluster && 
+				if (this->findroot(e)==pclus){					
 					cf = 1;
 					break;
 				}	
