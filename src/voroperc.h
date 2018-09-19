@@ -128,10 +128,6 @@ public:
 	void setup_edge_perc_lattice();
 	void set_lattice_midpoint_intersect();
 	void set_lattice_cpa_intersect();
-	void check_voro_percolation(std::string& str);
-	int check_voro_perc_x(std::string& percdir);
-	int check_voro_perc_y(std::string& percdir);
-	int check_voro_perc_z(std::string& percdir);
 
 	// print information: lattice, network, xyz
 	void open_xyz(std::string& str){
