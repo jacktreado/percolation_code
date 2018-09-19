@@ -646,18 +646,24 @@ void clustertree::merge_clusters(vector<int>& NNNvec){
 }
 
 
-void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec,vector<int> ev_0[], vector<double>& vx_0, vector<double>& vy_0, vector<double>& vz_0, double B_0[]){
+void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec, vector<int> ev_0[], vector<double>& vx_0, vector<double>& vy_0, vector<double>& vz_0, double B_0[]){
 	long long int ii,i,j,irand1,irand2,itmp;
 	long long int s1,s2;
 	long long int r1,r2;
 	long long int big = 0;
 	long long int bigr = 0;
 	long long int nn_tmp;
-	long long int v1,v2,vr;
-	double dr1x,dr1y,dr1z,dr1;
-	double dr2x,dr2y,dr2z,dr2;
-	double dx1,dy1,dz1,dv;
-	double dx2,dy2,dz2,d;
+	int span;
+	// long long int v1,v2,vr;
+	// double dr1x,dr1y,dr1z,dr1;
+	// double dr2x,dr2y,dr2z,dr2;
+	// double dx1,dy1,dz1,dv;
+	// double dx2,dy2,dz2,d;
+	double ds;
+
+	// vector of possible cross-boundary pairs
+	vector< vector<int> > boundpairs;
+	vector<int> vtmp(2);
 
 	// # of function calls
 	int kf = 0;
@@ -692,16 +698,25 @@ void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec,vector<int> ev_0[
 			r1 = this->findroot(s1,kf);
 
 			for (j=0; j<NNNvec.at(i); j++){
-				s2 = nn[i][j];
+				s2 = nn[i][j];				
 
-				// skip nn if lattice is empty
+				// merge if lattice site is occupied
 				if (lattice[s2] == 1){
+					// get distance between 2 sites (specifically for edge percolation)
+					ds = this->get_site_distance(s1,s2,ev_0,vx_0,vy_0,vz_0);
+
+					// if ds > box length, then boundary points, so do not merge yer
+					if (ds > 0.5*B_0[0]){
+						vtmp[0] = s1;
+						vtmp[1] = s2;					
+						boundpairs.push_back(vtmp);
+						continue;
+					}
 					// get root of adj pt
 					r2 = this->findroot(s2,kf);
 
 					// if diff roots, then need to merge (if same, already merged!)
 					if (r2 != r1){
-
 						// if r2 > r1 (mind minus sign), merge 1 -> 2
 						if (ptr[r1] > ptr[r2]){
 							ptr[r2] += ptr[r1];
@@ -721,71 +736,216 @@ void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec,vector<int> ev_0[
 							bigr = r1;
 						}
 					}
-					
-					// else, check if they are in the same cluster, because then => percolation!
-					else if (r1 == r2 && s2 != r2 && s1 != r1 && perc == 0){
-						// get vertices attached to edge
-						// note: use 0th vertex for s1 & s2, as edge is defined as closer to 
-						// 0th edge, so if neighbors are across boundary 0th edges by definition
-						// will be across box from each other
-						v1 = ev_0[s1][0];
-						v2 = ev_0[s2][0];
-						vr = ev_0[r1][0];
-
-						// get distances
-						dr1x = vx_0[v1]-vx_0[vr];
-						dr1x = dr1x - B_0[0]*round(dr1x/B_0[0]);
-
-						dr1y = vy_0[v1]-vy_0[vr];
-						dr1y = dr1y - B_0[1]*round(dr1y/B_0[0]);
-
-						dr1z = vz_0[v1]-vz_0[vr];
-						dr1z = dr1z - B_0[2]*round(dr1z/B_0[0]);
-
-						// get distances
-						dr2x = vx_0[v2]-vx_0[vr];
-						dr2x = dr2x - B_0[0]*round(dr2x/B_0[0]);
-
-						dr2y = vy_0[v2]-vy_0[vr];
-						dr2y = dr2y - B_0[1]*round(dr2y/B_0[1]);
-
-						dr2z = vz_0[v2]-vz_0[vr];
-						dr2z = dr2z - B_0[2]*round(dr2z/B_0[2]);
-
-						// get MIC distances to root
-						dr1 = sqrt(dr1x*dr1x + dr1y*dr1y + dr1z*dr1z);
-						dr2 = sqrt(dr2x*dr2x + dr2y*dr2y + dr2z*dr2z);
-
-						// get both std & minimum image distance between v1 and v2
-						dx1 = vx_0[v2]-vx_0[v1];
-						dx2 = dx1 - B_0[0]*round(dx1/B_0[0]);
-
-						dy1 = vy_0[v2]-vy_0[v1];
-						dy2 = dy1 - B_0[1]*round(dy1/B_0[1]);
-
-						dz1 = vz_0[v2]-vz_0[v1];
-						dz2 = dz1 - B_0[2]*round(dz1/B_0[2]);
-
-						dv = sqrt(dx1*dx1 + dy1*dy1 + dz1*dz1);
-						d = sqrt(dx2*dx2 + dy2*dy2 + dz2*dz2);
-						
-						
-						// if difference in displacements to root is greater than PBC distance, percolated!
-						if (dv > d && dr1 > 0.5*B_0[0] && dr2 > 0.5*B_0[0]){
-							cout << "** in merge_clusters, found perc across box!" << endl;
-							cout << "** dr1 = " << dr1 << ", dr2 = " << dr2 << endl;
-							perc = 1;
-						}
-					}
-				}
+				}				
 			}
 		}
 	}
+
+	// detect spanning cluster
+	pclus = bigr;
+	span = this->check_spanning(ev_0,vx_0,vy_0,vz_0,B_0);
+	cout << "span = " << span << endl;
+
+	// if spanning cluster found, check boundary pairs
+	if (span == 1){		
+		this->merge_boundary_pairs(boundpairs,big,bigr);
+	}	
 
 	smax = big;
 	pclus = bigr;
 	fcalls = kf;
 }
+
+
+double clustertree::get_site_distance(int s1, int s2, vector<int> ev[], vector<double>& vx, vector<double>& vy, vector<double>& vz){
+	// get non-pbc distance between edge s1 and s2
+	double dx,dy,dz,dr;
+	int v1,v2;
+
+	// get principle vertices for s1 & s2
+	v1 = ev[s1][0];
+	v2 = ev[s2][0];
+
+	// get distances
+	dx = vx[v2]-vx[v1];
+	dy = vy[v2]-vy[v1];
+	dz = vz[v2]-vz[v1];
+	dr = sqrt(dx*dx + dy*dy + dz*dz);
+
+	// return distance
+	return dr;
+}
+
+int clustertree::check_spanning(vector<int> ev[], vector<double>& vx, vector<double>& vy, vector<double>& vz, double B[]){
+	int span;
+
+	span = this->span_check(ev,vx,B);
+	if (span == 0)
+		span = this->span_check(ev,vy,B);
+	if (span == 0)
+		span = this->span_check(ev,vz,B);
+	
+	return span;
+}
+
+int clustertree::span_check(vector<int> ev[], vector<double>& vtmp, double B[]){
+	// local variables
+	int e,span,boxedge,cf,v1;
+	double loc,loc0,loc1,dloc,subdiv,p;
+
+	// check percolation in X direction
+	span = 0;
+	cf = 1;
+	subdiv = 10.0;
+	loc0 = -2*B[0];
+	loc1 = 0;
+	loc = 0;
+	dloc = B[0]/subdiv;
+	boxedge = 0;
+
+	while(cf == 1 && boxedge == 0){
+		cf = 0;
+
+		// check which bin to test	
+		// if loc is 0, check left edge and out to -inf
+		if (abs(loc) < 1e-14){	
+			loc0 = -10*B[0];
+			loc1 = loc+dloc;
+		}
+		// if loc is close to box edge, check from edge to +inf
+		else if (loc >= B[0]-dloc-1e-8){
+			loc0 = loc;
+			loc1 = loc+10*B[0];
+			boxedge = 1;
+		}
+		else{
+			loc0 = loc;
+			loc1 = loc+dloc;
+		}		
+
+		// check for all points between loc & loc+dloc
+		for (e=0; e<N; e++){
+			if (lattice[e]==0)
+				continue;
+					
+			v1 = ev[e][0];
+			p = vtmp[v1];
+
+			// check for v pos in bin
+			if (p > loc0 && p <= loc1){
+				// check if edge is occupied with biggest cluster && 
+				if (this->findroot(e)==pclus){					
+					cf = 1;
+					break;
+				}	
+			}
+		}
+		if (cf == 1)
+			loc += dloc;
+
+	}
+	if (cf == 1 && boxedge == 1)
+		span = 1;
+
+	return span;
+}
+
+
+void clustertree::merge_boundary_pairs(vector< vector<int> >& boundpairs, long long int& big, long long int& bigr){
+	int i,nbp,s1,s2,r1,r2;
+
+	nbp = boundpairs.size();
+	// unite non-spanning pairs
+	for (i=0; i<nbp; i++){
+		s1 = boundpairs[i][0];
+		s2 = boundpairs[i][1];
+
+		r1 = this->findroot(s1);
+		r2 = this->findroot(s2);	
+		
+		if (r1 != r2 && r1 != pclus && r2 != pclus){
+			// if r2 > r1 (mind minus sign), merge 1 -> 2
+			if (ptr[r1] > ptr[r2]){
+				ptr[r2] += ptr[r1];
+				ptr[r1] = r2;
+				r1 = r2;
+			}
+
+			// else, merge r2 -> r1
+			else{
+				ptr[r1] += ptr[r2];
+				ptr[r2] = r1;
+			}
+
+			// if new cluster is max, increase max!
+			if (-ptr[r1] > big){							
+				big = -ptr[r1];
+				bigr = r1;
+			}
+		}
+	}
+
+	// unite non-spanning with spanning
+	for (i=0; i<nbp; i++){
+		s1 = boundpairs[i][0];
+		s2 = boundpairs[i][1];
+
+		r1 = this->findroot(s1);
+		r2 = this->findroot(s2);	
+		
+		if (r1 != r2 && ( (r1 != pclus && r2 == pclus) || (r1 == pclus && r2 != pclus) ) ) {
+			// if r2 > r1 (mind minus sign), merge 1 -> 2
+			if (ptr[r1] > ptr[r2]){
+				ptr[r2] += ptr[r1];
+				ptr[r1] = r2;
+				r1 = r2;
+			}
+
+			// else, merge r2 -> r1
+			else{
+				ptr[r1] += ptr[r2];
+				ptr[r2] = r1;
+			}
+
+			// if new cluster is max, increase max!
+			if (-ptr[r1] > big){							
+				big = -ptr[r1];
+				bigr = r1;
+			}
+		}
+	}
+
+	// check if 
+	for (i=0; i<nbp; i++){
+		s1 = boundpairs[i][0];
+		s2 = boundpairs[i][1];
+
+		r1 = this->findroot(s1);
+		r2 = this->findroot(s2);	
+		
+		if (r1 == r2 && r1 == pclus){
+			perc = 1;
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // perc search - XY
 int clustertree::perc_search_XY(){

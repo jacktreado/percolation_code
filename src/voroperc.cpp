@@ -133,6 +133,7 @@ void voroperc::delete_vpp_vars(){
 	for (i=0; i<NV; i++){
 		vn_map[i].clear();
 	}
+	vn_map.clear();
 }
 
  
@@ -1355,15 +1356,15 @@ void voroperc::voro_edge_perc(double epsilon, int seed, double aH, double aL){
 
 		// merge clusters		
 		this->merge_clusters_edge_perc(edge_nn,ev,vx,vy,vz,B);
-		// this->merge_clusters(edge_nn);	
-		perc1 = this->get_perc();	
+		// this->merge_clusters(edge_nn);
+		perc = this->get_perc();	
 		this->post_process_voro();
-		this->check_voro_percolation(percdir);
-		perc2 = this->get_perc();
-		if (perc1 == 1 && perc2 == 1)
-			perc = 1;
-		else
-			perc = 0;
+		// this->check_voro_percolation(percdir);
+		// perc = this->get_perc();
+		// if (perc1 == 1 && perc2 == 1)
+		// 	perc = 1;
+		// else
+		// 	perc = 0;
 
 		// print info to console		
 		poro = exp(-NP*(1.33333333333)*PI*pow(r,NDIM));
@@ -1568,7 +1569,7 @@ int voroperc::check_voro_perc_x(string& percdir){
 				loc1 = loc+dloc;
 			}
 			// if loc is close to box edge, check from edge to +inf
-			else if (loc >= B[0]-1e-8){
+			else if (loc >= B[0]-dloc-1e-8){
 				loc0 = loc;
 				loc1 = loc+10*B[0];
 				boxedge = 1;
