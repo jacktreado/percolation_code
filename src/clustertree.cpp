@@ -659,11 +659,11 @@ void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec, vector<int> ev_0
 	// double dr2x,dr2y,dr2z,dr2;
 	// double dx1,dy1,dz1,dv;
 	// double dx2,dy2,dz2,d;
-	double ds;
+	double dx,dy,dz,ds;
 
 	// vector of possible cross-boundary pairs
 	vector< vector<int> > boundpairs;
-	vector<int> vtmp(2);
+	vector<int> vtmp(4);
 
 	// # of function calls
 	int kf = 0;
@@ -703,17 +703,40 @@ void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec, vector<int> ev_0
 				// merge if lattice site is occupied
 				if (lattice[s2] == 1){
 					// get distance between 2 sites (specifically for edge percolation)
-					ds = this->get_site_distance(s1,s2,ev_0,vx_0,vy_0,vz_0);
+					dx = 0;
+					dy = 0;
+					dz = 0;
+					this->get_site_distance(s1,s2,ev_0,vx_0,vy_0,vz_0,dx,dy,dz);
 
-					// if ds > box length, then boundary points, so do not merge yer
-					if (ds > 0.5*B_0[0]){
+					// get root of adj pt
+					r2 = this->findroot(s2,kf);
+
+					// if ds > (1/2) box length, then boundary points, so do not merge yet
+					if (abs(dx) > 0.5*B_0[0]){
 						vtmp[0] = s1;
-						vtmp[1] = s2;					
+						vtmp[1] = s2;
+						vtmp[2] = 0;
+						vtmp[3] = round(dx);		
 						boundpairs.push_back(vtmp);
 						continue;
 					}
-					// get root of adj pt
-					r2 = this->findroot(s2,kf);
+					else if (abs(dy) > 0.5*B_0[1]){
+						vtmp[0] = s1;
+						vtmp[1] = s2;
+						vtmp[2] = 1;
+						vtmp[3] = round(dy);			
+						boundpairs.push_back(vtmp);
+						continue;
+					}
+					else if (abs(dz) > 0.5*B_0[2]){
+						vtmp[0] = s1;
+						vtmp[1] = s2;
+						vtmp[2] = 2;
+						vtmp[3] = round(dz);			
+						boundpairs.push_back(vtmp);
+						continue;
+					}
+
 
 					// if diff roots, then need to merge (if same, already merged!)
 					if (r2 != r1){
@@ -743,12 +766,14 @@ void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec, vector<int> ev_0
 
 	// detect spanning cluster
 	pclus = bigr;
-	span = this->check_spanning(ev_0,vx_0,vy_0,vz_0,B_0);
-	cout << "span = " << span << endl;
+	span = this->check_spanning(boundpairs);
+	// cout << "span = " << span << endl;
 
 	// if spanning cluster found, check boundary pairs
-	if (span == 1){		
+	if (span == 1){
+		// perc = 1;
 		this->merge_boundary_pairs(boundpairs,big,bigr);
+		cout << endl;
 	}	
 
 	smax = big;
@@ -757,9 +782,8 @@ void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec, vector<int> ev_0
 }
 
 
-double clustertree::get_site_distance(int s1, int s2, vector<int> ev[], vector<double>& vx, vector<double>& vy, vector<double>& vz){
+void clustertree::get_site_distance(int s1, int s2, vector<int> ev[], vector<double>& vx, vector<double>& vy, vector<double>& vz, double& dx, double& dy, double& dz){
 	// get non-pbc distance between edge s1 and s2
-	double dx,dy,dz,dr;
 	int v1,v2;
 
 	// get principle vertices for s1 & s2
@@ -770,21 +794,125 @@ double clustertree::get_site_distance(int s1, int s2, vector<int> ev[], vector<d
 	dx = vx[v2]-vx[v1];
 	dy = vy[v2]-vy[v1];
 	dz = vz[v2]-vz[v1];
-	dr = sqrt(dx*dx + dy*dy + dz*dz);
-
-	// return distance
-	return dr;
 }
 
-int clustertree::check_spanning(vector<int> ev[], vector<double>& vx, vector<double>& vy, vector<double>& vz, double B[]){
-	int span;
+int clustertree::check_spanning(vector< vector<int> >& boundpairs){
+	int i,s1,s2,r1,r2,ds,ptrGS1,ptrGS2,rgs1,rgs2,sz,pclussz,d,s,nbp,span;
+	int pcf = -1;
+	int new_pclus;
+	span = 0;
 
-	span = this->span_check(ev,vx,B);
-	if (span == 0)
-		span = this->span_check(ev,vy,B);
-	if (span == 0)
-		span = this->span_check(ev,vz,B);
+	// span = this->span_check(ev,vx,B);
+	// if (span == 0)
+	// 	span = this->span_check(ev,vy,B);
+	// if (span == 0)
+	// 	span = this->span_check(ev,vz,B);
+
+	// merge with boundary ghost points
+	int ghostp[NDIM][2];
+	for (d=0; d<NDIM; d++){
+		ghostp[d][0] = -1;
+		ghostp[d][1] = -1;
+	}
+
+	// loop over boundary points, decide which boundary each is on, merge ghost point 
+	// to largest cluster on given boundary
+	nbp = boundpairs.size();
+	for (i=0; i<nbp; i++){
+		// get sites, crossing boundary
+		s1 = boundpairs[i][0];
+		s2 = boundpairs[i][1];
+		d = boundpairs[i][2];
+		ds = boundpairs[i][3];
+
+		r1 = this->findroot(s1);
+		r2 = this->findroot(s2);
+		// cout << "s1 = " << s1 << ", s2 = " << s2 << ", d = " << d << ", ds = " << ds << ", r1 = " << r1 << ", r2 = " << r2 << endl;
+
+		// get boundary side s of s1: s = 0 -> 0, s = 1 -> L
+		if (ds > 0)
+			s = 0;
+		else if (ds < 0)
+			s = 1;
+		else{
+			cout << "ds = 0 in spanning check, throwing error..." << endl;
+			throw;
+		}
+
+
+		// get current root site of gs on side of s1
+		if (ghostp[d][s]>=0)
+			ptrGS1 = ghostp[d][s];
+		else{
+			ptrGS1 = s1;
+			ghostp[d][s] = ptrGS1;
+		}
+
+		// get current root site of gs on side of s2		
+		if (ghostp[d][1-s]>=0)
+			ptrGS2 = ghostp[d][1-s];
+		else{
+			ptrGS2 = s2;
+			ghostp[d][1-s] = ptrGS2;
+		}
+
+		// get root sites of s1, s2, and ghost points		
+		rgs1 = this->findroot(ptrGS1);
+		rgs2 = this->findroot(ptrGS2);
+
+		// point ghostp[d][s] to larger cluster if cluster with root site r1 is larger
+		// than cluster 
+		if (ptr[r1] < ptr[rgs1])
+			ghostp[d][s] = s1;
+		// else, either ghostp points to s1, OR ghostp points to larger cluster. In either
+		// case, do nothing
+
+		// check same for s2
+		if (ptr[r2] < ptr[rgs2])
+			ghostp[d][1-s] = s2;
+
+	}
+
+	// once ghost points are merged with largest cluster on each boundary, check across boundary
+	// to see if pair ghost point has same root cluster. IF SO, then spanning cluster found!
+	for (d=0; d<NDIM; d++){
+		if (ghostp[d][0] >= 0 && ghostp[d][1] >= 0){
+			rgs1 = this->findroot(ghostp[d][0]);
+			rgs2 = this->findroot(ghostp[d][1]);
+			if (rgs1 == rgs2){
+				if (span == 0){
+					cout << "spanning cluster detected! pclus = " << pclus;
+					span = 1;
+				}				
+
+				// check if cluster > pclus
+				sz = -ptr[rgs1];
+				pclussz = -ptr[pclus];
+				if (sz < pclussz){
+					cout << "; d = " << d << ", rgs1 = " << rgs1 << ", spanning cluster smaller than pclus found...";
+					if (pcf == -1){
+						pcf = 0;
+						new_pclus = rgs1;
+					}
+				}
+				else if (sz == pclussz){
+					cout << "; d = " << d << ", rgs1 = " << rgs1 << ", which is the pclus! ";
+					pcf = 1;
+				}
+				else{
+					cout << "; d = " << d << ", rgs1 = " << rgs1 << ", spanning cluster found that is larger than pclus, so making pclus spanning cluster...";					
+					pclus = rgs1;
+				}
+			}
+		}
+	}
+
+	if (pcf == 0){
+		cout << "pclus not spanning, so setting pclus to spanning cluster! ";
+		pclus = new_pclus;
+	}
 	
+	// return value of span
 	return span;
 }
 
@@ -882,7 +1010,12 @@ void clustertree::merge_boundary_pairs(vector< vector<int> >& boundpairs, long l
 				big = -ptr[r1];
 				bigr = r1;
 			}
+			// pclus = bigr;
 		}
+	}
+	if (-ptr[pclus] < big){		
+		cout << "; nonspanning found that is larger than old pclus!";
+		// pclus = bigr;
 	}
 
 	// unite non-spanning with spanning
@@ -912,8 +1045,15 @@ void clustertree::merge_boundary_pairs(vector< vector<int> >& boundpairs, long l
 				big = -ptr[r1];
 				bigr = r1;
 			}
-		}
+			pclus = bigr;
+		}		
+	}	
+	if (-ptr[pclus] < big && bigr != pclus){		
+		cout << "; pclus merged into larger cluster!";
+		pclus = bigr;
 	}
+	else if (-ptr[pclus] < big && bigr == pclus)
+		cout << "; pclus still the largest cluster...";
 
 	// check if 
 	for (i=0; i<nbp; i++){

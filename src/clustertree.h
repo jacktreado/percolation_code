@@ -82,9 +82,9 @@ public:
 	void merge_clusters_edge_perc(vector<int>& NNNvec,vector<int> ev_0[], vector<double>& vx_0, 
 		vector<double>& vy_0, vector<double>& vz_0, double B_0[]);
 	int get_site_distance(int s1, int s2);
-	double get_site_distance(int s1, int s2, vector<int> ev_0[], vector<double>& vx_0, vector<double>& vy_0, vector<double>& vz_0);
+	void get_site_distance(int s1, int s2, vector<int> ev_0[], vector<double>& vx_0, vector<double>& vy_0, vector<double>& vz_0, double& dx, double& dy, double& dz);
 	void merge_boundary_pairs(vector< vector<int> >& boundpairs, long long int& big, long long int& bigr);
-	int check_spanning(vector<int> ev[], vector<double>& vx, vector<double>& vy, vector<double>& vz, double B[]);
+	int check_spanning(vector< vector<int> >& boundpairs);
 	int span_check(vector<int> ev[], vector<double>& vtmp, double B[]);
 
 	void post_process();						// check percolation, get cluster stats
