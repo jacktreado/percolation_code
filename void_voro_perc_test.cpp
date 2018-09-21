@@ -11,7 +11,7 @@ using namespace std;
 
 int main(){
 	// initialize the only two important parameters
-	int N = 1000;
+	int N = 20;
 	int seed = 12;
 	string xyzstr = "voro_perc.xyz";
 

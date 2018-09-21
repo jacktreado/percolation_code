@@ -980,6 +980,8 @@ int clustertree::span_check(vector<int> ev[], vector<double>& vtmp, double B[]){
 
 
 void clustertree::merge_boundary_pairs(vector< vector<int> >& boundpairs, long long int& big, long long int& bigr){
+	// THIS FORM GIVES CORRECT nu VALUE! UPDATE pclus IN SECOND LOOP!!
+
 	int i,nbp,s1,s2,r1,r2;
 
 	nbp = boundpairs.size();
@@ -1010,12 +1012,10 @@ void clustertree::merge_boundary_pairs(vector< vector<int> >& boundpairs, long l
 				big = -ptr[r1];
 				bigr = r1;
 			}
-			// pclus = bigr;
 		}
 	}
 	if (-ptr[pclus] < big){		
 		cout << "; nonspanning found that is larger than old pclus!";
-		// pclus = bigr;
 	}
 
 	// unite non-spanning with spanning
