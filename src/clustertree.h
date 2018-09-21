@@ -46,6 +46,7 @@ public:
 	void set_lattice(long long int site, int val) {lattice[site] = val;};
 	void set_ptr(long long int site, int val) {ptr[site] = val;};
 	void set_nn(long long int i, int j, int val){nn[i][j] = val;};
+	void set_perc(int val) {perc = val;};
 	void reset_sys();
 	void reset_ptr();
 	int get_L() {return L;};
@@ -78,6 +79,14 @@ public:
 	long long int findroot(long long int i, int &kf);				// finds root, keeps track of function calls
 	void merge_clusters();						// merge clusters
 	void merge_clusters(vector<int>& NNNvec);
+	void merge_clusters_edge_perc(vector<int>& NNNvec,vector<int> ev_0[], vector<double>& vx_0, 
+		vector<double>& vy_0, vector<double>& vz_0, double B_0[]);
+	int get_site_distance(int s1, int s2);
+	void get_site_distance(int s1, int s2, vector<int> ev_0[], vector<double>& vx_0, vector<double>& vy_0, vector<double>& vz_0, double& dx, double& dy, double& dz);
+	void merge_boundary_pairs(vector< vector<int> >& boundpairs, long long int& big, long long int& bigr);
+	int check_spanning(vector< vector<int> >& boundpairs);
+	int span_check(vector<int> ev[], vector<double>& vtmp, double B[]);
+
 	void post_process();						// check percolation, get cluster stats
 	void post_process_voro();
 	int perc_search_XY();
