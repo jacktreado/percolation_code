@@ -532,12 +532,40 @@ long long int clustertree::findroot(long long int i, int &kf){
 		5. Largest cluster size is monitored.	
 */
 void clustertree::merge_clusters(){
-	long long int i,j;
+	long long int i,j,irand1,irand2,itmp,s1p;
 	long long int s1,s2;
 	long long int r1,r2;
 	long long int big = 0;
 	long long int bigr = 0;
 	long long int nn_tmp;
+	int span;
+	int on_bound = 0;
+
+	// vector of possible cross-boundary pairs
+	vector< vector<int> > boundpairs;
+	vector<int> vtmp(4);
+
+	// # of function calls
+	int kf = 0;
+
+	// percolated or not
+	perc = 0;
+
+	// create random list of indices
+	vector<long long int> uq_inds(N);
+	for (i=0; i<N; i++){
+		uq_inds[i] = i;
+	}
+
+	
+	int NRM = 1e3;
+	for (i=0; i<NRM; i++){
+		irand1 = round((N-1)*drand48());
+		irand2 = round((N-1)*drand48());
+		itmp = uq_inds[irand1];
+		uq_inds[irand1] = uq_inds[irand2];
+		uq_inds[irand2] = itmp;
+	}
 
 	// # of function calls
 	int kf = 0;
@@ -553,6 +581,34 @@ void clustertree::merge_clusters(){
 
 				// skip nn if lattice is empty
 				if (lattice[s2] == 1){
+
+					// test if boundary pairs...if so, skip to next neighbor
+					on_bound = 0;
+					for (d=0; d<NDIM; d++){
+						s1p = floor((s1 % pow(L,d+1))/pow(L,d));
+						if (s1p == 0){
+							vtmp[0] = s1;
+							vtmp[1] = s2;
+							vtmp[2] = d;
+							vtmp[3] = 1;
+							boundpairs.push_back(vtmp);
+							on_bound = 1;
+							break;
+						}
+						else if (s1p == L-1){
+							vtmp[0] = s1;
+							vtmp[1] = s2;
+							vtmp[2] = d;
+							vtmp[3] = -1;
+							boundpairs.push_back(vtmp);
+							on_bound = 1;
+							break;
+						}
+					}
+
+					if (on_bound == 1)
+						continue;
+
 					// get root of adj pt
 					r2 = this->findroot(s2,kf);
 
@@ -582,6 +638,16 @@ void clustertree::merge_clusters(){
 			}
 		}
 	}
+
+	// detect spanning cluster
+	pclus = bigr;
+	span = this->check_spanning(boundpairs);
+
+	// if spanning cluster found, check boundary pairs
+	if (span == 1){
+		this->merge_boundary_pairs(boundpairs,big,bigr);
+		cout << endl;
+	}	
 
 	smax = big;
 	pclus = bigr;
@@ -654,11 +720,6 @@ void clustertree::merge_clusters_edge_perc(vector<int>& NNNvec, vector<int> ev_0
 	long long int bigr = 0;
 	long long int nn_tmp;
 	int span;
-	// long long int v1,v2,vr;
-	// double dr1x,dr1y,dr1z,dr1;
-	// double dr2x,dr2y,dr2z,dr2;
-	// double dx1,dy1,dz1,dv;
-	// double dx2,dy2,dz2,d;
 	double dx,dy,dz,ds;
 
 	// vector of possible cross-boundary pairs
@@ -1444,6 +1505,9 @@ void clustertree::post_process(){
 		smax = 0;
 	}
 
+	/*
+	REMOVED BECAUSE PERCOLATION IS NOW CHECKED IN MERGE_CLUSTERS
+
 	// check for percolation
 	if (smax > max){		
 		perc = this->perc_search_XY();
@@ -1475,6 +1539,7 @@ void clustertree::post_process(){
 
 	if (perc == 0)
 		pclus = -1;
+	*/
 }
 
 
