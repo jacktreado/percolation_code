@@ -61,7 +61,7 @@ int main(int argc, char *argv[]){
 	// stringstream s1ss(seed_str);
 	// s1ss >> seed;
 
-	int N = 1000;
+	int N = 300;
 	int NDIM = 3;
 	int NNN = 26;
 	double g0 = 0.1;

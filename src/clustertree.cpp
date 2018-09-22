@@ -532,21 +532,18 @@ long long int clustertree::findroot(long long int i, int &kf){
 		5. Largest cluster size is monitored.	
 */
 void clustertree::merge_clusters(){
-	long long int i,j,irand1,irand2,itmp,s1p;
+	long long int i,j,irand1,irand2,itmp,s1p,s2p;
 	long long int s1,s2;
 	long long int r1,r2;
 	long long int big = 0;
 	long long int bigr = 0;
 	long long int nn_tmp;
-	int span;
+	int span,d;
 	int on_bound = 0;
 
 	// vector of possible cross-boundary pairs
 	vector< vector<int> > boundpairs;
 	vector<int> vtmp(4);
-
-	// # of function calls
-	int kf = 0;
 
 	// percolated or not
 	perc = 0;
@@ -585,24 +582,23 @@ void clustertree::merge_clusters(){
 					// test if boundary pairs...if so, skip to next neighbor
 					on_bound = 0;
 					for (d=0; d<NDIM; d++){
-						s1p = floor((s1 % pow(L,d+1))/pow(L,d));
-						if (s1p == 0){
+						s1p = floor((s1 % (int)pow(L,d+1))/(int)pow(L,d));
+						s2p = floor((s1 % (int)pow(L,d+1))/(int)pow(L,d));
+						if (s1p == 0 && s2p == L-1){
 							vtmp[0] = s1;
 							vtmp[1] = s2;
 							vtmp[2] = d;
 							vtmp[3] = 1;
 							boundpairs.push_back(vtmp);
 							on_bound = 1;
-							break;
 						}
-						else if (s1p == L-1){
+						else if (s1p == L-1 && s2p == 0){
 							vtmp[0] = s1;
 							vtmp[1] = s2;
 							vtmp[2] = d;
 							vtmp[3] = -1;
 							boundpairs.push_back(vtmp);
 							on_bound = 1;
-							break;
 						}
 					}
 
