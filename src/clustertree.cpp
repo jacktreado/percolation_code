@@ -583,7 +583,7 @@ void clustertree::merge_clusters(){
 					on_bound = 0;
 					for (d=0; d<NDIM; d++){
 						s1p = floor((s1 % (int)pow(L,d+1))/(int)pow(L,d));
-						s2p = floor((s1 % (int)pow(L,d+1))/(int)pow(L,d));
+						s2p = floor((s2 % (int)pow(L,d+1))/(int)pow(L,d));
 						if (s1p == 0 && s2p == L-1){
 							vtmp[0] = s1;
 							vtmp[1] = s2;
@@ -636,14 +636,19 @@ void clustertree::merge_clusters(){
 	}
 
 	// detect spanning cluster
+	cout << "** checking for spanning..." << endl;
 	pclus = bigr;
 	span = this->check_spanning(boundpairs);
 
 	// if spanning cluster found, check boundary pairs
+	
 	if (span == 1){
+		cout << "** checking for self wrapping..." << endl;
 		this->merge_boundary_pairs(boundpairs,big,bigr);
-		cout << endl;
+		cout << endl;		
 	}	
+	else
+		cout << "no spanning cluster found..." << endl;
 
 	smax = big;
 	pclus = bigr;
@@ -884,7 +889,6 @@ int clustertree::check_spanning(vector< vector<int> >& boundpairs){
 
 		r1 = this->findroot(s1);
 		r2 = this->findroot(s2);
-		// cout << "s1 = " << s1 << ", s2 = " << s2 << ", d = " << d << ", ds = " << ds << ", r1 = " << r1 << ", r2 = " << r2 << endl;
 
 		// get boundary side s of s1: s = 0 -> 0, s = 1 -> L
 		if (ds > 0)
