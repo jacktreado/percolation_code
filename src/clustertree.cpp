@@ -532,21 +532,18 @@ long long int clustertree::findroot(long long int i, int &kf){
 		5. Largest cluster size is monitored.	
 */
 void clustertree::merge_clusters(){
-	long long int i,j,irand1,irand2,itmp,s1p;
+	long long int i,j,irand1,irand2,itmp,s1p,s2p;
 	long long int s1,s2;
 	long long int r1,r2;
 	long long int big = 0;
 	long long int bigr = 0;
 	long long int nn_tmp;
-	int span;
+	int span,d;
 	int on_bound = 0;
 
 	// vector of possible cross-boundary pairs
 	vector< vector<int> > boundpairs;
 	vector<int> vtmp(4);
-
-	// # of function calls
-	int kf = 0;
 
 	// percolated or not
 	perc = 0;
@@ -585,24 +582,23 @@ void clustertree::merge_clusters(){
 					// test if boundary pairs...if so, skip to next neighbor
 					on_bound = 0;
 					for (d=0; d<NDIM; d++){
-						s1p = floor((s1 % pow(L,d+1))/pow(L,d));
-						if (s1p == 0){
+						s1p = floor((s1 % (int)pow(L,d+1))/(int)pow(L,d));
+						s2p = floor((s2 % (int)pow(L,d+1))/(int)pow(L,d));
+						if (s1p == 0 && s2p == L-1){
 							vtmp[0] = s1;
 							vtmp[1] = s2;
 							vtmp[2] = d;
 							vtmp[3] = 1;
 							boundpairs.push_back(vtmp);
 							on_bound = 1;
-							break;
 						}
-						else if (s1p == L-1){
+						else if (s1p == L-1 && s2p == 0){
 							vtmp[0] = s1;
 							vtmp[1] = s2;
 							vtmp[2] = d;
 							vtmp[3] = -1;
 							boundpairs.push_back(vtmp);
 							on_bound = 1;
-							break;
 						}
 					}
 
@@ -640,14 +636,19 @@ void clustertree::merge_clusters(){
 	}
 
 	// detect spanning cluster
+	cout << "** checking for spanning..." << endl;
 	pclus = bigr;
 	span = this->check_spanning(boundpairs);
 
 	// if spanning cluster found, check boundary pairs
+	
 	if (span == 1){
+		cout << "** checking for self wrapping..." << endl;
 		this->merge_boundary_pairs(boundpairs,big,bigr);
-		cout << endl;
+		cout << endl;		
 	}	
+	else
+		cout << "no spanning cluster found..." << endl;
 
 	smax = big;
 	pclus = bigr;
@@ -888,7 +889,6 @@ int clustertree::check_spanning(vector< vector<int> >& boundpairs){
 
 		r1 = this->findroot(s1);
 		r2 = this->findroot(s2);
-		// cout << "s1 = " << s1 << ", s2 = " << s2 << ", d = " << d << ", ds = " << ds << ", r1 = " << r1 << ", r2 = " << r2 << endl;
 
 		// get boundary side s of s1: s = 0 -> 0, s = 1 -> L
 		if (ds > 0)
