@@ -48,22 +48,22 @@ int main(int argc, char *argv[]){
 	gss >> g;
 
 	// first, instantiate test object to get box length in angstroms
-	double B;
+	double B,Na;
 	int NS = 10;
 	int NC = 3;
-	int NAprob = 13*N;
 	voidcluster test_obj(pstr,NS,NDIM,NNN,NC);
 	B = test_obj.get_B();
+	Na = test_obj.get_NP();
 	cout << "B = " << B << endl;
-	cout << "NAprob = " << NAprob << endl;
+	cout << "NA = " << Na << endl;
 
 	// get proper number of sites per side given grid spacing, instantiate second, "true" object
 	NS = (int)floor(B/g);
 
 	// also get proper number of cells
-	if (NAprob < 500)
+	if (Na < 500)
 		NC = 3;
-	else if (NAprob < 2000)
+	else if (Na < 2000)
 		NC = 4;
 	else
 		NC = 5;
@@ -71,21 +71,10 @@ int main(int argc, char *argv[]){
 
 	// setup percolation finder
 	double aH,aL,aC,epsilon;
-	aH = 1.3;
+	aH = 5;
 	aL = 0.001;
-	aC = 0.5;
-	epsilon = 1e-8;
-
-	// print grid, initial info
-	cout << "Beginning particle clustering algorithm for random, overlapping spheres on following grid: " << endl;
-	cout << "-- N = " << N << endl;
-	cout << "-- NDIM = " << NDIM << endl;
-	cout << "-- NS = " << NS << endl;
-	cout << "-- NC = " << NC << endl;
-	cout << "-- g = " << g << endl;
-	cout << "-- aH = " << aH << endl;
-	cout << "-- aL = " << aL << endl;
-	cout << "-- aC = " << aC << endl;
+	aC = 0.55;
+	epsilon = 1e-8;	
 
 	// instantiate true object
 	voidcluster respack(pstr,NS,NDIM,NNN,NC);
@@ -125,7 +114,17 @@ int main(int argc, char *argv[]){
 	respack.label_cells();
 
 	// get percolation
-	cout << "get probe particle percolation..." << endl;
+	cout << "Beginning particle clustering algorithm for random, overlapping spheres on following grid: " << endl;
+	cout << "-- N = " << N << endl;
+	cout << "-- NDIM = " << NDIM << endl;
+	cout << "-- NS = " << NS << endl;
+	cout << "-- NC = " << NC << endl;
+	cout << "-- g = " << g << endl;
+	cout << "-- aH = " << aH << endl;
+	cout << "-- aL = " << aL << endl;
+	cout << "-- aC = " << aC << endl;
+	cout << endl << endl;
+
 	respack.find_probe_perc(aH,aL,aC,epsilon);
 
 	// save to file
