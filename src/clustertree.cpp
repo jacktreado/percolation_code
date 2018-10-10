@@ -532,11 +532,7 @@ long long int clustertree::findroot(long long int i, int &kf){
 		5. Largest cluster size is monitored.	
 */
 void clustertree::merge_clusters(){
-<<<<<<< HEAD
 	long long int i,j,d,irand1,irand2,itmp,s1p,s2p;
-=======
-	long long int i,j,irand1,irand2,itmp,s1p,s2p;
->>>>>>> 7ce8d8275dfaf94ea89e10133616db57145d2071
 	long long int s1,s2;
 	long long int r1,r2;
 	long long int l1,l2;
@@ -583,16 +579,11 @@ void clustertree::merge_clusters(){
 					// test if boundary pairs...if so, skip to next neighbor
 					on_bound = 0;
 					for (d=0; d<NDIM; d++){
-<<<<<<< HEAD
 						l1 = pow(L,d+1);
 						l2 = pow(L,d);
 						s1p = floor((s1 % l1)/l2);
 						s2p = floor((s2 % l1)/l2);
 
-=======
-						s1p = floor((s1 % (int)pow(L,d+1))/(int)pow(L,d));
-						s2p = floor((s2 % (int)pow(L,d+1))/(int)pow(L,d));
->>>>>>> 7ce8d8275dfaf94ea89e10133616db57145d2071
 						if (s1p == 0 && s2p == L-1){
 							vtmp[0] = s1;
 							vtmp[1] = s2;
