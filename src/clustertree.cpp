@@ -532,9 +532,10 @@ long long int clustertree::findroot(long long int i, int &kf){
 		5. Largest cluster size is monitored.	
 */
 void clustertree::merge_clusters(){
-	long long int i,j,irand1,irand2,itmp,s1p;
+	long long int i,j,d,irand1,irand2,itmp,s1p,s2p;
 	long long int s1,s2;
 	long long int r1,r2;
+	long long int l1,l2;
 	long long int big = 0;
 	long long int bigr = 0;
 	long long int nn_tmp;
@@ -556,7 +557,6 @@ void clustertree::merge_clusters(){
 	for (i=0; i<N; i++){
 		uq_inds[i] = i;
 	}
-
 	
 	int NRM = 1e3;
 	for (i=0; i<NRM; i++){
@@ -566,9 +566,6 @@ void clustertree::merge_clusters(){
 		uq_inds[irand1] = uq_inds[irand2];
 		uq_inds[irand2] = itmp;
 	}
-
-	// # of function calls
-	int kf = 0;
 
 	for (i=0; i<N; i++){				
 		// only continue if on an occupied lattice site
@@ -585,8 +582,12 @@ void clustertree::merge_clusters(){
 					// test if boundary pairs...if so, skip to next neighbor
 					on_bound = 0;
 					for (d=0; d<NDIM; d++){
-						s1p = floor((s1 % pow(L,d+1))/pow(L,d));
-						if (s1p == 0){
+						l1 = pow(L,d+1);
+						l2 = pow(L,d);
+						s1p = floor((s1 % l1)/l2);
+						s2p = floor((s2 % l1)/l2);
+
+						if (s1p == 0 && s2p == L-1){
 							vtmp[0] = s1;
 							vtmp[1] = s2;
 							vtmp[2] = d;
@@ -595,7 +596,7 @@ void clustertree::merge_clusters(){
 							on_bound = 1;
 							break;
 						}
-						else if (s1p == L-1){
+						else if (s1p == L-1 && s2p == 0){
 							vtmp[0] = s1;
 							vtmp[1] = s2;
 							vtmp[2] = d;
@@ -1504,42 +1505,6 @@ void clustertree::post_process(){
 		smean = 0;
 		smax = 0;
 	}
-
-	/*
-	REMOVED BECAUSE PERCOLATION IS NOW CHECKED IN MERGE_CLUSTERS
-
-	// check for percolation
-	if (smax > max){		
-		perc = this->perc_search_XY();
-		if (perc == 1)
-			cout << "XY";
-
-		if (NDIM == 3){
-			if (perc == 0){			
-				// cout << "checking XZ perc....";
-				perc = this->perc_search_XZ();	
-				if (perc == 1)
-					cout << "XZ";		
-
-				if (perc == 0){
-					// cout << "checking YZ perc....";
-					perc = this->perc_search_YZ();
-					if (perc == 1)
-						cout << "YZ";
-				}
-			}
-		}
-		else if(NDIM > 3){
-			cout << "NDIM > 3 not supported at this time." << endl;
-			throw "NDIM > 3 not yet supported.\n";
-		}
-	}
-	else		
-		perc = 0;
-
-	if (perc == 0)
-		pclus = -1;
-	*/
 }
 
 

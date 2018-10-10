@@ -345,14 +345,6 @@ voidcluster::voidcluster(string& pstr, int l, int ndim, int nnn, int nc) : clust
 	cout << "loading particle info from " << pstr << endl;
 
 	// get header
-	int jam;
-	obj >> jam;
-	if (jam != 1){
-		cout << "system isn't jammed, ending." << endl;
-		throw "unjammed system found\n";
-	}
-	cout << "jam = " << jam << endl;
-
 	// get number of particles
 	int nres = 0;
 	obj >> nres;
@@ -360,7 +352,7 @@ voidcluster::voidcluster(string& pstr, int l, int ndim, int nnn, int nc) : clust
 
 	// get sys size
 	double Btmp = 1.0;
-	obj >> Btmp;
+	obj >> Btmp >> Btmp >> Btmp;
 	cout << "L = " << Btmp << endl;
 
 	// get initial phi
@@ -373,12 +365,14 @@ voidcluster::voidcluster(string& pstr, int l, int ndim, int nnn, int nc) : clust
 	obj >> ctr;
 	string header(" ");
 	getline(obj,header);
-	cout << "header: " << header << endl;
+	cout << "header 1: " << header << endl;
+	getline(obj,header);
+	cout << "header 2: " << header << endl;
 
 	// now loading in particle information
 	int ind,j,p,NEXTRA;
 	int k,kmax;
-	double tr,diam,xtmp1,ytmp1,ztmp1,mindiam,scale;
+	double tr,radtmp1,xtmp1,ytmp1,ztmp1,minrad,scale;
 	vector<double> radtmp;
 	vector<double> xtmp;
 	vector<double> ytmp;
@@ -389,28 +383,28 @@ voidcluster::voidcluster(string& pstr, int l, int ndim, int nnn, int nc) : clust
 	NEXTRA = 12;		// number of extra entries we don't care about
 	k = 0;
 	kmax = 1e6;
-	mindiam = Btmp;
+	minrad = Btmp;
 	cout << "Reading in values:" << endl;
 	while(!obj.eof() && k < kmax){
 		obj >> ind;
-		obj >> diam;
+		obj >> radtmp1;
 		obj >> xtmp1;
 		obj >> ytmp1;
 		obj >> ztmp1;
 		for (j=0; j<NEXTRA; j++)
 			obj >> tr;
 
-		if (diam < mindiam)
-			mindiam = diam;
+		if (radtmp1 < minrad)
+			minrad = radtmp1;
 
-		radtmp.push_back(0.5*diam);
+		radtmp.push_back(radtmp1);
 		xtmp.push_back(xtmp1);
 		ytmp.push_back(ytmp1);
 		ztmp.push_back(ztmp1);
 
 		// ouput pushback values
 		cout << setw(13) << ind;
-		cout << setw(13) << 0.5*diam;
+		cout << setw(13) << radtmp1;
 		cout << setw(13) << xtmp1;
 		cout << setw(13) << ytmp1;
 		cout << setw(13) << ztmp1;
@@ -431,7 +425,7 @@ voidcluster::voidcluster(string& pstr, int l, int ndim, int nnn, int nc) : clust
 	NP = p;
 
 	// set scale, scale all lengths system
-	scale = 0.5*mindiam;
+	scale = minrad;
 	cout << "scale = " << scale << endl;
 	Btmp = Btmp/scale;
 	
@@ -783,7 +777,7 @@ int voidcluster::check_probe_overlap(int site, double a){
 	int L = this->get_L();
 
 	// declare local variables
-	int d,pp,p,NPit,c,i;
+	int d,pp,p,NPit,c,i,s1,s2;
 	double dr,h,prober;
 
 	// get position in space
@@ -798,7 +792,7 @@ int voidcluster::check_probe_overlap(int site, double a){
 		c = sclabel[site];
 		NPit = pcell[c].size();
 		for (i=0; i<NPit; i++)
-			pcheck.push_back(pcell[c].at(i));
+			pcheck.push_back(pcell[c].at(i));		
 	}
 	else{
 		NPit = NP;
@@ -812,7 +806,10 @@ int voidcluster::check_probe_overlap(int site, double a){
 
 		// use pythagorean thm. to get distance
 		for(d=0; d<NDIM; d++){
-			sposd = g*floor((site % (int)pow(L,d+1))/(pow(L,d)));
+			s1 = pow(L,d+1);
+			s2 = pow(L,d);
+			sposd = g*floor((site % s1)/s2);
+
 			dr = pos[p][d] - sposd;
 			dr = dr - B[d]*round(dr/B[d]);
 			h += dr*dr;
@@ -881,7 +878,7 @@ void voidcluster::find_perc(double aH, double aL, double epsilon){
 	cout << endl;
 	for (int e=0; e<12*w; e++)
 		cout << "=";
-	cout << endl;
+	cout << endl;	
 
 	// loop until converged on percolation probability and make sure cluster is percolated
 	while (check >= epsilon && k < kmax){
@@ -894,8 +891,7 @@ void voidcluster::find_perc(double aH, double aL, double epsilon){
 		// merge clusters, check for percolation
 		this->merge_clusters();
 		this->post_process();
-		perc = this->get_perc();
-
+		perc = this->get_perc();		
 
 		// output information to console
 		poro = exp(-NP*(1.33333333333)*PI*pow(a,NDIM));
@@ -948,11 +944,7 @@ void voidcluster::find_perc(double aH, double aL, double epsilon){
 		ac = -1;
 		vctot = -1;
 	}
-
-
 }
-
-
 
 void voidcluster::find_particle_perc(double aH, double aL, double aC, double epsilon){
 	// get important clustertree variables
@@ -998,7 +990,7 @@ void voidcluster::find_particle_perc(double aH, double aL, double aC, double eps
 		k++;
 		check = a;		
 
-		// get lattice with new radius
+		// get lattice with new radius		
 		this->rand_sphere_pperc(a);		
 
 		// merge clusters, check for percolation
@@ -1058,8 +1050,6 @@ void voidcluster::find_particle_perc(double aH, double aL, double aC, double eps
 		ac = -1;
 		vctot = -1;
 	}
-
-
 }
 
 void voidcluster::find_probe_perc(double aH, double aL, double aC, double epsilon){
@@ -1079,6 +1069,7 @@ void voidcluster::find_probe_perc(double aH, double aL, double aC, double epsilo
 	a = aC;
 	check = 10.0*epsilon;
 	check_new = check;
+	perc = 0;
 
 	// output information to console
 	int w = 15;
@@ -1097,14 +1088,16 @@ void voidcluster::find_probe_perc(double aH, double aL, double aC, double epsilo
 	cout << endl;
 	for (int e=0; e<11*w; e++)
 		cout << "=";
-	cout << endl;
+	cout << endl;	
 
 	// loop until converged on percolation probability and make sure cluster is percolated
-	while (check >= epsilon && k < kmax){
+	while( ((check > epsilon) || perc == 0) && k < kmax){
 		k++;
 		check = a;		
 
 		// get lattice with new radius
+		this->reset_sys();
+		this->reset_ptr();
 		this->probe_void(a);		
 
 		// merge clusters, check for percolation
@@ -1144,26 +1137,25 @@ void voidcluster::find_probe_perc(double aH, double aL, double aC, double epsilo
 	if (k < kmax && check < epsilon){
 		cout << "percolation found!";
 		ac = ap;
-		this->probe_void(ac);		
 
-		// merge clusters, check for percolation
-		this->merge_clusters();
-		this->post_process();
-		perc = this->get_perc();
 		lsum = this->get_sum_s();
 		cout << "; lsum = " << lsum;
 		vctot = (double)lsum;
 		vctot *= pow(g,NDIM);
 		vctot /= B[0]*B[1]*B[2];
 		cout << "; ac = " << ac << "; vctot = " << vctot << "; g = " << g << endl;
+
+		// plot if uncommented
+		// string xyzf = "res_cvoids_final.xyz";
+		// ofstream xyzobj(xyzf.c_str());
+		// this->print_res_xyz(xyzobj);
+		// xyzobj.close();
 	}
 	else{
 		cout << "percolation not found in k < kmax :(" << endl;
 		ac = -1;
 		vctot = -1;
 	}
-
-
 }
 
 
@@ -1413,7 +1405,7 @@ void voidcluster::print_res_xyz(ofstream &obj){
 
 	// print lattice positions
 	sp = 'O';
-	double la = 0.05*rad[0];
+	double la = ac;
 	double sposd;
 	int pclus,root;
 

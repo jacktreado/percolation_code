@@ -14,14 +14,18 @@
 
 using namespace std;
 
-int main(int argc, char *argv[]){
+int main(){
 	// read in inputs
-	string Nstr = argv[1];
-	string NNNstr = argv[2];
-	string gstr = argv[3];
-	string pstr = argv[4];
-	string statstr = argv[5];
-	string sstr = argv[6];
+	string statstr = "stat.test";
+	string sstr = "s.test";
+	string pstr = "/Users/JackTreado/Jamming/ProteinVoids/cluster/res/rcp/config/res_rcp_config_N16_seed1.dat";
+
+	// get values of input variables
+	int N,NNN;
+	double g;
+	N = 16;
+	NNN = 26;
+	g = 0.3;
 
 	// ofstream objects
 	cout << "opening files to write...";
@@ -35,35 +39,25 @@ int main(int argc, char *argv[]){
 		return 0;		
 	}
 
-	// get values of input variables
-	int N,NNN;
-	double g;
-	stringstream Nss(Nstr);
-	Nss >> N;
-
-	stringstream NNNss(NNNstr);
-	NNNss >> NNN;
-
-	stringstream gss(gstr);
-	gss >> g;
-
 	// first, instantiate test object to get box length in angstroms
 	double B;
+	int NA;
 	int NS = 10;
 	int NC = 3;
-	int NAprob = 13*N;
+	
 	voidcluster test_obj(pstr,NS,NDIM,NNN,NC);
 	B = test_obj.get_B();
+	NA = test_obj.get_NP();
 	cout << "B = " << B << endl;
-	cout << "NAprob = " << NAprob << endl;
+	cout << "NA =  = " << NA << endl;
 
 	// get proper number of sites per side given grid spacing, instantiate second, "true" object
 	NS = (int)floor(B/g);
 
 	// also get proper number of cells
-	if (NAprob < 500)
+	if (NA < 500)
 		NC = 3;
-	else if (NAprob < 2000)
+	else if (NA < 2000)
 		NC = 4;
 	else
 		NC = 5;
@@ -71,7 +65,7 @@ int main(int argc, char *argv[]){
 
 	// setup percolation finder
 	double aH,aL,aC,epsilon;
-	aH = 1.3;
+	aH = 5;
 	aL = 0.001;
 	aC = 0.5;
 	epsilon = 1e-8;

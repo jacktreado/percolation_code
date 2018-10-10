@@ -49,6 +49,7 @@ public:
 	void set_radius(double a) {for(int i=0; i<NP; i++) {rad[i] = a;} };
 	double get_vctot(){return pow(g,this->get_NDIM())*(double)this->get_lattice_sum();};
 	double get_B(){return B[0];};
+	double get_NP(){return NP;};
 
 	// particle overlap check
 	int check_rad_overlap(int site);
@@ -96,7 +97,6 @@ public:
 	void print_cellpos();
 	void print_cell_xyz(ofstream &obj);
 	void load_zhe_pos(string &zstr);
-
 };
 
 
