@@ -539,8 +539,8 @@ void clustertree::merge_clusters(){
 	long long int big = 0;
 	long long int bigr = 0;
 	long long int nn_tmp;
-	int span,d;
-	int on_bound = 0;
+	int span,kf;
+	int on_bound = 0;	
 
 	// vector of possible cross-boundary pairs
 	vector< vector<int> > boundpairs;
@@ -548,6 +548,7 @@ void clustertree::merge_clusters(){
 
 	// percolated or not
 	perc = 0;
+	kf = 0;
 
 	// create random list of indices
 	vector<long long int> uq_inds(N);
@@ -636,19 +637,14 @@ void clustertree::merge_clusters(){
 	}
 
 	// detect spanning cluster
-	cout << "** checking for spanning..." << endl;
 	pclus = bigr;
 	span = this->check_spanning(boundpairs);
 
-	// if spanning cluster found, check boundary pairs
-	
+	// if spanning cluster found, check boundary pairs	
 	if (span == 1){
-		cout << "** checking for self wrapping..." << endl;
 		this->merge_boundary_pairs(boundpairs,big,bigr);
 		cout << endl;		
 	}	
-	else
-		cout << "no spanning cluster found..." << endl;
 
 	smax = big;
 	pclus = bigr;
@@ -863,12 +859,6 @@ int clustertree::check_spanning(vector< vector<int> >& boundpairs){
 	int pcf = -1;
 	int new_pclus;
 	span = 0;
-
-	// span = this->span_check(ev,vx,B);
-	// if (span == 0)
-	// 	span = this->span_check(ev,vy,B);
-	// if (span == 0)
-	// 	span = this->span_check(ev,vz,B);
 
 	// merge with boundary ghost points
 	int ghostp[NDIM][2];
